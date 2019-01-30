@@ -273,27 +273,24 @@ class _DetailScreenState extends State<DetailScreen> {
         appBar: AppBar(
           actions: getScreenActions(context)
         ),
-        body: Padding(
+        body: ListView(
             padding: EdgeInsets.all(SCREEN_PADDING),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text("\"${this.widget.memory.comment}\"",
-                      style: TextStyle(
-                          fontSize: COMMENT_FONT_SIZE,
-                          fontStyle: FontStyle.italic)),
-                  Text(
-                    "— ${this.widget.memory.author}",
-                    style: TextStyle(fontSize: AUTHOR_FONT_SIZE),
-                    textAlign: TextAlign.right,
-                  ),
-                  Text(
-                    Memory.dateTimeToString(context, this.widget.memory.date),
-                    style: TextStyle(fontSize: DATE_FONT_SIZE),
-                    textAlign: TextAlign.right,
-                  )
-                ]
-            )
+            children: <Widget>[
+              Text("\"${this.widget.memory.comment}\"",
+                  style: TextStyle(
+                      fontSize: COMMENT_FONT_SIZE,
+                      fontStyle: FontStyle.italic)),
+              Text(
+                "— ${this.widget.memory.author}",
+                style: TextStyle(fontSize: AUTHOR_FONT_SIZE),
+                textAlign: TextAlign.right,
+              ),
+              Text(
+                Memory.dateTimeToString(context, this.widget.memory.date),
+                style: TextStyle(fontSize: DATE_FONT_SIZE),
+                textAlign: TextAlign.right,
+              )
+            ]
         )
     );
   }
