@@ -47,8 +47,9 @@ class DataStorage {
 
   /// Returns the array of memories saved in the data file.
   Future<List<Memory>> getMemories() async {
+    final file = await _localFile;
+
     try {
-      final file = await _localFile;
       String contents = await file.readAsString();
       Map<String, dynamic> jsonData = jsonDecode(contents);
       List<dynamic> jsonMemories = jsonData["memories"];
@@ -58,8 +59,8 @@ class DataStorage {
       }).toList();
     }
     catch (e) {
-      /// On error, return an empty list.
-      print(e);
+      /// On error, create the file and return an empty list.
+      file.create();
       return [];
     }
   }
@@ -171,6 +172,14 @@ class MemoryCard extends StatelessWidget {
 
 /// Detail screen for a MemoryCard.
 class DetailScreen extends StatefulWidget {
+  static const double SCREEN_PADDING = 16;
+
+  static const double COMMENT_FONT_SIZE = 28;
+  static const double AUTHOR_FONT_SIZE = 24;
+  static const double DATE_FONT_SIZE = 20;
+
+  static const int RESTORE_BUTTON_INDEX = 1;
+
   final Memory memory;
   final List<Memory> memories;
   final DataStorage storage;
@@ -188,14 +197,6 @@ class DetailScreen extends StatefulWidget {
 
 /// The state for a DetailScreen.
 class _DetailScreenState extends State<DetailScreen> {
-  static const double SCREEN_PADDING = 16;
-
-  static const double COMMENT_FONT_SIZE = 28;
-  static const double AUTHOR_FONT_SIZE = 24;
-  static const double DATE_FONT_SIZE = 20;
-
-  static const int RESTORE_BUTTON_INDEX = 1;
-
   /// Move this memory to trash.
   Future<void> moveMemoryToTrash() async {
     this.widget.memory.deleted = true;
@@ -252,7 +253,7 @@ class _DetailScreenState extends State<DetailScreen> {
     ];
 
     if (this.widget.memory.deleted) { // Memory is already in trash can
-      actions.insert(RESTORE_BUTTON_INDEX, IconButton(
+      actions.insert(DetailScreen.RESTORE_BUTTON_INDEX, IconButton(
         icon: Icon(Icons.restore_from_trash),
         onPressed: () {
           this.restoreMemory();
@@ -274,20 +275,21 @@ class _DetailScreenState extends State<DetailScreen> {
           actions: getScreenActions(context)
         ),
         body: ListView(
-            padding: EdgeInsets.all(SCREEN_PADDING),
+            padding: EdgeInsets.all(DetailScreen.SCREEN_PADDING),
             children: <Widget>[
               Text("\"${this.widget.memory.comment}\"",
                   style: TextStyle(
-                      fontSize: COMMENT_FONT_SIZE,
-                      fontStyle: FontStyle.italic)),
+                      fontSize: DetailScreen.COMMENT_FONT_SIZE,
+                      fontStyle: FontStyle.italic)
+              ),
               Text(
                 "— ${this.widget.memory.author}",
-                style: TextStyle(fontSize: AUTHOR_FONT_SIZE),
+                style: TextStyle(fontSize: DetailScreen.AUTHOR_FONT_SIZE),
                 textAlign: TextAlign.right,
               ),
               Text(
                 Memory.dateTimeToString(context, this.widget.memory.date),
-                style: TextStyle(fontSize: DATE_FONT_SIZE),
+                style: TextStyle(fontSize: DetailScreen.DATE_FONT_SIZE),
                 textAlign: TextAlign.right,
               )
             ]
@@ -326,6 +328,9 @@ class AddMemoryScreen extends StatelessWidget {
 
 /// A form to add a new Memory.
 class AddMemoryForm extends StatefulWidget {
+  static const double SCREEN_PADDING = 16;
+  static const double INPUT_VERTICAL_PADDING = SCREEN_PADDING;
+
   final List<Memory> memories;
   final DataStorage storage;
   final Memory memoryToEdit;
@@ -343,8 +348,6 @@ class AddMemoryForm extends StatefulWidget {
 
 /// Contains the state of an AddMemoryForm.
 class _AddMemoryFormState extends State<AddMemoryForm> {
-  static const double SCREEN_PADDING = 16;
-  static const double INPUT_VERTICAL_PADDING = SCREEN_PADDING;
   static const int EPOCH_YEAR = 1970;
 
   final _addMemoryFormKey = GlobalKey<FormState>();
@@ -405,7 +408,7 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
     return Form(
         key: _addMemoryFormKey,
         child: Padding(
-            padding: EdgeInsets.all(SCREEN_PADDING),
+            padding: EdgeInsets.all(AddMemoryForm.SCREEN_PADDING),
             child: Column(
                 children: <Widget>[
                   TextFormField(
@@ -423,7 +426,7 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
                   ),
                   Padding(
                       padding: EdgeInsets.symmetric(
-                          vertical: INPUT_VERTICAL_PADDING
+                          vertical: AddMemoryForm.INPUT_VERTICAL_PADDING
                       ),
                       child: TextFormField(
                           controller: authorController,
@@ -603,6 +606,12 @@ class _TrashScreenState extends State<TrashScreen> {
 
 /// Home page for the Fuzzy app.
 class HomeScreen extends StatefulWidget {
+  static const double CARD_LIST_INSET = MemoryCard.CARD_VERTICAL_MARGIN;
+  static const double MEMORY_COUNT_FONT_SIZE = 40;
+  static const double MEMORY_COUNT_SUBTITLE_FONT_SIZE =
+      MEMORY_COUNT_FONT_SIZE / 2;
+  static const double MEMORY_COUNT_PADDING = 8;
+
   final DataStorage storage;
 
   /// Construct a new HomeScreen with the storage location [storage] and
@@ -616,12 +625,6 @@ class HomeScreen extends StatefulWidget {
 
 /// Contains the state of a HomePage.
 class _HomeScreenState extends State<HomeScreen> {
-  static const double CARD_LIST_INSET = MemoryCard.CARD_VERTICAL_MARGIN;
-  static const double MEMORY_COUNT_FONT_SIZE = 40;
-  static const double MEMORY_COUNT_SUBTITLE_FONT_SIZE =
-      MEMORY_COUNT_FONT_SIZE / 2;
-  static const double MEMORY_COUNT_PADDING = 8;
-
   List<Memory> memories = [];
 
   /// Initialize the state of this HomeScreen.
@@ -694,7 +697,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: Center(
             child: ListView(
-                padding: EdgeInsets.symmetric(vertical: CARD_LIST_INSET),
+                padding: EdgeInsets.symmetric(
+                    vertical: HomeScreen.CARD_LIST_INSET
+                ),
                 children: buildMemoryList()
             )
         ),
@@ -710,16 +715,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: <Widget>[
                         Icon(
                           Icons.cloud_queue,
-                          size: MEMORY_COUNT_FONT_SIZE
+                          size: HomeScreen.MEMORY_COUNT_FONT_SIZE
                         ),
                         Padding(
                           padding: EdgeInsets.only(
-                              left: MEMORY_COUNT_PADDING
+                              left: HomeScreen.MEMORY_COUNT_PADDING
                           ),
                           child: Text(
                               this.countSaved().toString(),
                               style: TextStyle(
-                                fontSize: MEMORY_COUNT_FONT_SIZE,
+                                fontSize: HomeScreen.MEMORY_COUNT_FONT_SIZE,
                                 fontWeight: FontWeight.w300
                               )
                             )
@@ -729,7 +734,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                         "saved " + (countSaved() == 1 ? "memory" : "memories"),
                         style: TextStyle(
-                            fontSize: MEMORY_COUNT_SUBTITLE_FONT_SIZE,
+                            fontSize:
+                              HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
                             fontWeight: FontWeight.w300
                         )
                     )
