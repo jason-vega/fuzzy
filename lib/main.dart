@@ -174,9 +174,9 @@ class MemoryCard extends StatelessWidget {
 class DetailScreen extends StatefulWidget {
   static const double SCREEN_PADDING = 16;
 
-  static const double COMMENT_FONT_SIZE = 28;
-  static const double AUTHOR_FONT_SIZE = 24;
-  static const double DATE_FONT_SIZE = 20;
+  static const double COMMENT_FONT_SIZE = 24;
+  static const double AUTHOR_FONT_SIZE = 20;
+  static const double DATE_FONT_SIZE = 18;
 
   static const int RESTORE_BUTTON_INDEX = 1;
 
@@ -313,6 +313,7 @@ class AddMemoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+        resizeToAvoidBottomInset: false,
         appBar: AppBar(
             title: Text(this.memoryToEdit != null ?
               "Edit Memory" : "Add Memory")
@@ -330,6 +331,7 @@ class AddMemoryScreen extends StatelessWidget {
 class AddMemoryForm extends StatefulWidget {
   static const double SCREEN_PADDING = 16;
   static const double INPUT_VERTICAL_PADDING = SCREEN_PADDING;
+  static const int MAXIMUM_COMMENT_LINES = 5;
 
   final List<Memory> memories;
   final DataStorage storage;
@@ -405,19 +407,22 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
     dateController.text = this._chosenDate != null ?
         Memory.dateTimeToString(context, this._chosenDate) : "";
 
-    return Form(
-        key: _addMemoryFormKey,
-        child: Padding(
-            padding: EdgeInsets.all(AddMemoryForm.SCREEN_PADDING),
+    return SingleChildScrollView(
+        padding: EdgeInsets.all(AddMemoryForm.SCREEN_PADDING),
+        child: Form(
+            key: _addMemoryFormKey,
             child: Column(
                 children: <Widget>[
                   TextFormField(
                       controller: commentController,
                       decoration: InputDecoration(
-                        suffixIcon: Icon(Icons.comment),
-                        border: OutlineInputBorder(),
-                        labelText: "Comment"
+                          suffixIcon: Icon(Icons.comment),
+                          border: OutlineInputBorder(),
+                          labelText: "Comment"
                       ),
+                      maxLines: null,
+                      //AddMemoryForm.MAXIMUM_COMMENT_LINES,
+                      keyboardType: TextInputType.multiline,
                       validator: (value) {
                         if (value.isEmpty) {
                           return "Please enter a comment.";
@@ -425,123 +430,134 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
                       }
                   ),
                   Padding(
-                      padding: EdgeInsets.symmetric(
-                          vertical: AddMemoryForm.INPUT_VERTICAL_PADDING
-                      ),
-                      child: TextFormField(
-                          controller: authorController,
-                          decoration: InputDecoration(
-                              suffixIcon: Icon(Icons.person),
-                              border: OutlineInputBorder(),
-                              labelText: "Author"
-                          ),
-                          validator: (value) {
-                            if (value.isEmpty) {
-                              return "Please enter an author.";
-                            }
-                          }
-                      )
-                  ),
-                  FlatButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        showDatePicker(
-                            context: context,
-                            initialDate: this._chosenDate != null?
-                              this._chosenDate : DateTime.now(),
-                            firstDate: DateTime(EPOCH_YEAR),
-                            lastDate: DateTime.now()
-                        ).then((DateTime chosenDate) {
-                          if (chosenDate != null) {
-                            showTimePicker(
-                                context: context,
-                                initialTime: this._chosenDate != null?
-                                  TimeOfDay.fromDateTime(this._chosenDate) :
-                                  TimeOfDay.now(),
-                            ).then((TimeOfDay chosenTime) {
-                              if (chosenTime != null) {
-                                setState(() {
-                                  this._chosenDate = DateTime(
-                                      chosenDate.year,
-                                      chosenDate.month,
-                                      chosenDate.day,
-                                      chosenTime.hour,
-                                      chosenTime.minute
-                                  );
-                                });
-                              }
-                            });
-                          }
-                        });
-                      },
-                      child: TextFormField(
-                          controller: dateController,
-                          enabled: false,
-                          decoration: InputDecoration(
-                              suffixIcon: Icon(Icons.calendar_today),
-                              border: OutlineInputBorder(),
-                              disabledBorder: OutlineInputBorder(
-                                borderSide: BorderSide(
-                                    color: Colors.grey[600]
-                                )
-                              ),
-                              errorBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: Colors.red
-                                  )
-                              ),
-                              errorStyle: TextStyle(
-                                color: Colors.red
-                              ),
-                              labelText: "Date",
-                              labelStyle: TextStyle(
-                                color: Colors.grey[600]
-                              )
-                          ),
-                          validator: (value) {
-                            if (value.isEmpty) {
-                              return "Please select a date.";
-                            }
-                          }
-                      )
-                  ),
-                  RaisedButton(
-                      onPressed: () {
-                        if (_addMemoryFormKey.currentState.validate()) {
-                          if (this.widget.memoryToEdit != null) {
-                            this.editMemory(this.widget.memoryToEdit,
-                                commentController.text,
-                                authorController.text,
-                                this._chosenDate);
-
-                            /// Return to original detail screen.
-                            Navigator.pop(context);
-                          }
-                          else {
-                            Memory memory = Memory(commentController.text,
-                                authorController.text,
-                                this._chosenDate);
-
-                            this.saveMemory(memory);
-
-                            /// Opens new detail screen of new memory. Back
-                            /// button pressed on detail screen returns to home
-                            /// screen.
-                            Navigator.pushReplacement(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        DetailScreen(
-                                          memory: memory,
-                                          memories: this.widget.memories,
-                                          storage: this.widget.storage
-                                        )
-                                )
-                            );
+                    padding: EdgeInsets.only(
+                        top: AddMemoryForm.INPUT_VERTICAL_PADDING
+                    ),
+                    child: TextFormField(
+                        controller: authorController,
+                        decoration: InputDecoration(
+                            suffixIcon: Icon(Icons.person),
+                            border: OutlineInputBorder(),
+                            labelText: "Author"
+                        ),
+                        validator: (value) {
+                          if (value.isEmpty) {
+                            return "Please enter an author.";
                           }
                         }
-                      },
-                      child: Text('Save')
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                        top: AddMemoryForm.INPUT_VERTICAL_PADDING
+                    ),
+                    child:
+                    FlatButton(
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          showDatePicker(
+                              context: context,
+                              initialDate: this._chosenDate != null ?
+                              this._chosenDate : DateTime.now(),
+                              firstDate: DateTime(EPOCH_YEAR),
+                              lastDate: DateTime.now()
+                          ).then((DateTime chosenDate) {
+                            if (chosenDate != null) {
+                              showTimePicker(
+                                context: context,
+                                initialTime: this._chosenDate != null ?
+                                TimeOfDay.fromDateTime(this._chosenDate) :
+                                TimeOfDay.now(),
+                              ).then((TimeOfDay chosenTime) {
+                                if (chosenTime != null) {
+                                  setState(() {
+                                    this._chosenDate = DateTime(
+                                        chosenDate.year,
+                                        chosenDate.month,
+                                        chosenDate.day,
+                                        chosenTime.hour,
+                                        chosenTime.minute
+                                    );
+                                  });
+                                }
+                              });
+                            }
+                          });
+                        },
+                        child: TextFormField(
+                            controller: dateController,
+                            enabled: false,
+                            decoration: InputDecoration(
+                                suffixIcon: Icon(Icons.calendar_today),
+                                border: OutlineInputBorder(),
+                                disabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                        color: Colors.grey[600]
+                                    )
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(
+                                        color: Colors.red
+                                    )
+                                ),
+                                errorStyle: TextStyle(
+                                    color: Colors.red
+                                ),
+                                labelText: "Date",
+                                labelStyle: TextStyle(
+                                    color: Colors.grey[600]
+                                )
+                            ),
+                            validator: (value) {
+                              if (value.isEmpty) {
+                                return "Please select a date.";
+                              }
+                            }
+                        )
+                    ),
+                  ),
+                  Padding(
+                      padding: EdgeInsets.only(
+                          top: AddMemoryForm.INPUT_VERTICAL_PADDING
+                      ),
+                      child: RaisedButton(
+                          onPressed: () {
+                            if (_addMemoryFormKey.currentState.validate()) {
+                              if (this.widget.memoryToEdit != null) {
+                                this.editMemory(this.widget.memoryToEdit,
+                                    commentController.text,
+                                    authorController.text,
+                                    this._chosenDate);
+
+                                /// Return to original detail screen.
+                                Navigator.pop(context);
+                              }
+                              else {
+                                Memory memory = Memory(commentController.text,
+                                    authorController.text,
+                                    this._chosenDate);
+
+                                this.saveMemory(memory);
+
+                                /// Opens new detail screen of new memory. Back
+                                /// button pressed on detail screen returns to
+                                /// home screen.
+                                Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            DetailScreen(
+                                                memory: memory,
+                                                memories: this.widget.memories,
+                                                storage: this.widget.storage
+                                            )
+                                    )
+                                );
+                              }
+                            }
+                          },
+                          child: Text('Save')
+                      )
                   )
                 ]
             )
