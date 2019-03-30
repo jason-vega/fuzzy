@@ -84,16 +84,19 @@ class Memory {
   String comment;
   String author;
   DateTime date;
+  bool image;
   bool deleted = false;
 
-  /// Construct a new Memory with the specified [comment], [author] and [date].
-  Memory(this.comment, this.author, this.date);
+  /// Construct a new Memory with the specified [comment], [author], [date] and
+  /// whether or not it is an [image].
+  Memory(this.comment, this.author, this.date, [this.image=false]);
 
   /// Construct a memory from a JSON object [json]
   Memory.fromJson(Map<String, dynamic> json) :
       this.comment = json["comment"],
       this.author = json["author"],
       this.date = DateTime.parse(json["date"]),
+      this.image = json["image"],
       this.deleted = json["deleted"];
 
   /// Returns a JSON object representation of this Memory.
@@ -102,6 +105,7 @@ class Memory {
         "comment": this.comment,
         "author": this.author,
         "date": this.date.toIso8601String(),
+        "image": this.image,
         "deleted": this.deleted
       };
 
@@ -627,6 +631,7 @@ class HomeScreen extends StatefulWidget {
   static const double MEMORY_COUNT_SUBTITLE_FONT_SIZE =
       MEMORY_COUNT_FONT_SIZE / 2;
   static const double MEMORY_COUNT_PADDING = 8;
+  static const double BUTTONS_TEXT_PADDING = 8;
 
   final DataStorage storage;
 
@@ -780,14 +785,84 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         floatingActionButton: FloatingActionButton(
             onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          AddMemoryScreen(
-                              memories: this.memories,
-                              storage: this.widget.storage
-                          )
-                  )
+              showModalBottomSheet(context: context,
+                  builder: (BuildContext context) {
+                    return ButtonBar(
+                      children: <Widget>[
+                        // TODO: Add photo feature
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Ink(
+                                decoration: ShapeDecoration(
+                                    color: Colors.blue,
+                                    shape: CircleBorder()
+                                ),
+                                child: IconButton(
+                                  icon: Icon(Icons.photo_album),
+                                  color: Colors.white,
+                                  onPressed: () {
+                                    Navigator.pushReplacement(context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                AddMemoryScreen(
+                                                    memories: this.memories,
+                                                    storage: this.widget.storage
+                                                )
+                                        )
+                                    );
+                                  },
+                                )
+                            ),
+                            Padding(
+                                padding: EdgeInsets.only(
+                                    top: HomeScreen.BUTTONS_TEXT_PADDING
+                                ),
+                                child: Text(
+                                    "Photo",
+                                    maxLines: 1
+                                )
+                            )
+                          ]
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Ink(
+                                decoration: ShapeDecoration(
+                                    color: Colors.blue,
+                                    shape: CircleBorder()
+                                ),
+                                child: IconButton(
+                                  icon: Icon(Icons.edit),
+                                  color: Colors.white,
+                                  onPressed: () {
+                                    Navigator.pushReplacement(context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                AddMemoryScreen(
+                                                    memories: this.memories,
+                                                    storage: this.widget.storage
+                                                )
+                                        )
+                                    );
+                                  },
+                                )
+                            ),
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  top: HomeScreen.BUTTONS_TEXT_PADDING
+                              ),
+                              child: Text(
+                                  "Text",
+                                  maxLines: 1
+                              )
+                            )
+                          ]
+                        )
+                      ]
+                    );
+                  }
               );
             },
             tooltip: 'Add',
