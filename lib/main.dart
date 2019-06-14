@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as Path;
 //import 'package:flutter/rendering.dart';
 
 void main() {
@@ -23,7 +25,7 @@ class FuzzyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       home: HomeScreen(
-        storage: DataStorage()
+          storage: DataStorage()
       ),
     );
   }
@@ -43,6 +45,15 @@ class DataStorage {
     final path = await _localPath;
 
     return File('$path/data.json');
+  }
+
+  /// Returns a reference to a new image file location.
+  Future<File> _createNewImageFile(File image) async {
+    final path = await _localPath;
+    final File newImage =
+      await image.copy('$path/${Path.basename(image.path)}');
+
+    return newImage;
   }
 
   /// Returns the array of memories saved in the data file.
@@ -82,22 +93,22 @@ class DataStorage {
 /// Represents information on a positive memory.
 class Memory {
   String comment;
+  String imageUrl;
   String author;
   DateTime date;
-  bool image;
   bool deleted = false;
 
   /// Construct a new Memory with the specified [comment], [author], [date] and
   /// whether or not it is an [image].
-  Memory(this.comment, this.author, this.date, [this.image=false]);
+  Memory(this.comment, this.author, this.date, [this.imageUrl]);
 
   /// Construct a memory from a JSON object [json]
   Memory.fromJson(Map<String, dynamic> json) :
-      this.comment = json["comment"],
-      this.author = json["author"],
-      this.date = DateTime.parse(json["date"]),
-      this.image = json["image"],
-      this.deleted = json["deleted"];
+        this.comment = json["comment"],
+        this.author = json["author"],
+        this.date = DateTime.parse(json["date"]),
+        this.imageUrl = json["imageUrl"],
+        this.deleted = json["deleted"];
 
   /// Returns a JSON object representation of this Memory.
   Map<String, dynamic> toJson() =>
@@ -105,7 +116,7 @@ class Memory {
         "comment": this.comment,
         "author": this.author,
         "date": this.date.toIso8601String(),
-        "image": this.image,
+        "imageUrl": this.imageUrl,
         "deleted": this.deleted
       };
 
@@ -146,13 +157,16 @@ class MemoryCard extends StatelessWidget {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
+                  (this.memory.imageUrl != null ?
+                  Image.file(File(this.memory.imageUrl)) :
                   Text(this.memory.comment,
                       style: TextStyle(
                           fontSize: COMMENT_FONT_SIZE,
                           fontStyle: FontStyle.italic),
                       textAlign: TextAlign.left,
                       maxLines: MAX_COMMENT_LINES,
-                      overflow: TextOverflow.ellipsis),
+                      overflow: TextOverflow.ellipsis)
+                  ),
                   Text("— ${this.memory.author}",
                       style: TextStyle(
                           fontSize: AUTHOR_FONT_SIZE,
@@ -210,6 +224,10 @@ class _DetailScreenState extends State<DetailScreen> {
 
   /// Permanently delete this memory.
   Future<void> deleteMemory() async {
+    /*if (this.widget.memory.imageUrl != null) {
+      File(this.widget.memory.imageUrl).delete();
+    }*/
+
     this.widget.memories.remove(this.widget.memory);
 
     this.widget.storage.saveMemories(this.widget.memories);
@@ -232,9 +250,9 @@ class _DetailScreenState extends State<DetailScreen> {
             Navigator.push(context,
                 MaterialPageRoute(
                     builder: (context) => AddMemoryScreen(
-                      memories: this.widget.memories,
-                      storage: this.widget.storage,
-                      memoryToEdit: this.widget.memory
+                        memories: this.widget.memories,
+                        storage: this.widget.storage,
+                        memoryToEdit: this.widget.memory,
                     )
                 )
             );
@@ -258,13 +276,13 @@ class _DetailScreenState extends State<DetailScreen> {
 
     if (this.widget.memory.deleted) { // Memory is already in trash can
       actions.insert(DetailScreen.RESTORE_BUTTON_INDEX, IconButton(
-        icon: Icon(Icons.restore_from_trash),
-        onPressed: () {
-          this.restoreMemory();
+          icon: Icon(Icons.restore_from_trash),
+          onPressed: () {
+            this.restoreMemory();
 
-          // Return home
-          Navigator.pop(context);
-        }
+            // Return home
+            Navigator.pop(context);
+          }
       ));
     }
 
@@ -276,15 +294,18 @@ class _DetailScreenState extends State<DetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          actions: getScreenActions(context)
+            actions: getScreenActions(context)
         ),
         body: ListView(
             padding: EdgeInsets.all(DetailScreen.SCREEN_PADDING),
             children: <Widget>[
+              (this.widget.memory.imageUrl != null ?
+              Image.file(File(this.widget.memory.imageUrl)) :
               Text("\"${this.widget.memory.comment}\"",
                   style: TextStyle(
                       fontSize: DetailScreen.COMMENT_FONT_SIZE,
                       fontStyle: FontStyle.italic)
+              )
               ),
               Text(
                 "— ${this.widget.memory.author}",
@@ -307,11 +328,12 @@ class AddMemoryScreen extends StatelessWidget {
   final List<Memory> memories;
   final DataStorage storage;
   final Memory memoryToEdit;
+  final File image;
 
   /// Create a new AddMemoryScreen where current memories are [memories] stored
   /// in [storage].
   AddMemoryScreen({Key key, @required this.memories, @required this.storage,
-    this.memoryToEdit}) :
+    this.memoryToEdit, this.image}) :
         super(key: key);
 
   @override
@@ -320,12 +342,15 @@ class AddMemoryScreen extends StatelessWidget {
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
             title: Text(this.memoryToEdit != null ?
-              "Edit Memory" : "Add Memory")
+            "Edit Memory" : "Add Memory")
         ),
         body: AddMemoryForm(
             memories: this.memories,
             storage: this.storage,
-            memoryToEdit: this.memoryToEdit
+            memoryToEdit: this.memoryToEdit,
+            image: (this.memoryToEdit != null &&
+                this.memoryToEdit.imageUrl != null ?
+                File(this.memoryToEdit.imageUrl) : this.image)
         )
     );
   }
@@ -340,11 +365,12 @@ class AddMemoryForm extends StatefulWidget {
   final List<Memory> memories;
   final DataStorage storage;
   final Memory memoryToEdit;
+  final File image;
 
   /// Create a new AddMemoryForm where current memories are [memories] stored in
   /// [storage].
   AddMemoryForm({Key key, @required this.memories, @required this.storage,
-    this.memoryToEdit}) :
+    this.memoryToEdit, this.image}) :
         super(key: key);
 
   /// Create the state for this AddMemoryForm.
@@ -370,12 +396,12 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
     super.initState();
 
     commentController.text = this.widget.memoryToEdit != null ?
-      this.widget.memoryToEdit.comment : "";
+    this.widget.memoryToEdit.comment : "";
     authorController.text = this.widget.memoryToEdit != null ?
-      this.widget.memoryToEdit.author : "";
+    this.widget.memoryToEdit.author : "";
 
     _chosenDate = this.widget.memoryToEdit != null ?
-      this.widget.memoryToEdit.date : null;
+    this.widget.memoryToEdit.date : null;
   }
 
   /// Clean up any resources used by the controllers.
@@ -409,7 +435,7 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
   @override
   Widget build(BuildContext context) {
     dateController.text = this._chosenDate != null ?
-        Memory.dateTimeToString(context, this._chosenDate) : "";
+    Memory.dateTimeToString(context, this._chosenDate) : "";
 
     return SingleChildScrollView(
         padding: EdgeInsets.all(AddMemoryForm.SCREEN_PADDING),
@@ -417,6 +443,8 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
             key: _addMemoryFormKey,
             child: Column(
                 children: <Widget>[
+                  (this.widget.image != null ?
+                  Image.file(this.widget.image) :
                   TextFormField(
                       controller: commentController,
                       decoration: InputDecoration(
@@ -432,6 +460,7 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
                           return "Please enter a comment.";
                         }
                       }
+                  )
                   ),
                   Padding(
                     padding: EdgeInsets.only(
@@ -537,9 +566,15 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
                                 Navigator.pop(context);
                               }
                               else {
-                                Memory memory = Memory(commentController.text,
+                                Memory memory = (this.widget.image != null ?
+                                Memory(commentController.text,
                                     authorController.text,
-                                    this._chosenDate);
+                                    this._chosenDate,
+                                    this.widget.image.path) :
+                                Memory(commentController.text,
+                                    authorController.text,
+                                    this._chosenDate)
+                                );
 
                                 this.saveMemory(memory);
 
@@ -614,12 +649,12 @@ class _TrashScreenState extends State<TrashScreen> {
   @override
   Widget build(BuildContext build) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Trash")
-      ),
-      body: ListView(
-        children: this.buildDeletedMemoryList()
-      )
+        appBar: AppBar(
+            title: Text("Trash")
+        ),
+        body: ListView(
+            children: this.buildDeletedMemoryList()
+        )
     );
   }
 }
@@ -668,18 +703,18 @@ class _HomeScreenState extends State<HomeScreen> {
       return GestureDetector(
           onTap: () {
             Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => DetailScreen(
-                    memory: memory,
-                    memories: this.memories,
-                    storage: this.widget.storage
-                  )
-              )
+                context,
+                MaterialPageRoute(
+                    builder: (context) => DetailScreen(
+                        memory: memory,
+                        memories: this.memories,
+                        storage: this.widget.storage
+                    )
+                )
             );
           },
           child: MemoryCard(memory)
-        );
+      );
     }).toList();
   }
 
@@ -709,6 +744,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return counter;
   }
 
+  // Retrieve an image from gallery.
+  Future<File> getImage() async {
+    var selected = await ImagePicker.pickImage(source: ImageSource.gallery);
+
+    return selected;
+  }
+
   /// Returns the home page being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
@@ -725,142 +767,152 @@ class _HomeScreenState extends State<HomeScreen> {
             )
         ),
         drawer: Drawer(
-          child: ListView(
-            children: <Widget>[
-              DrawerHeader(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Icon(
-                          Icons.cloud_queue,
-                          size: HomeScreen.MEMORY_COUNT_FONT_SIZE
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(
-                              left: HomeScreen.MEMORY_COUNT_PADDING
+            child: ListView(
+                children: <Widget>[
+                  DrawerHeader(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Icon(
+                                    Icons.cloud_queue,
+                                    size: HomeScreen.MEMORY_COUNT_FONT_SIZE
+                                ),
+                                Padding(
+                                    padding: EdgeInsets.only(
+                                        left: HomeScreen.MEMORY_COUNT_PADDING
+                                    ),
+                                    child: Text(
+                                        this.countSaved().toString(),
+                                        style: TextStyle(
+                                            fontSize:
+                                            HomeScreen.MEMORY_COUNT_FONT_SIZE,
+                                            fontWeight: FontWeight.w300
+                                        )
+                                    )
+                                )
+                              ]
                           ),
-                          child: Text(
-                              this.countSaved().toString(),
+                          Text(
+                              "saved " +
+                                  (countSaved() == 1 ? "memory" : "memories"),
                               style: TextStyle(
-                                fontSize: HomeScreen.MEMORY_COUNT_FONT_SIZE,
-                                fontWeight: FontWeight.w300
+                                  fontSize:
+                                  HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
+                                  fontWeight: FontWeight.w300
                               )
-                            )
-                        )
-                      ]
-                    ),
-                    Text(
-                        "saved " + (countSaved() == 1 ? "memory" : "memories"),
-                        style: TextStyle(
-                            fontSize:
-                              HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
-                            fontWeight: FontWeight.w300
-                        )
-                    )
-                  ],
-                )
-              ),
-              ListTile(
-                leading: Icon(Icons.delete),
-                title: Text("Trash"),
-                trailing: Text(countDeleted().toString()),
-                onTap: () {
-                  // Close drawer
-                  Navigator.pop(context);
-
-                  // Open trash screen
-                  Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => TrashScreen(
-                          memories: this.memories,
-                          storage: this.widget.storage
+                          )
+                        ],
                       )
-                  ));
-                }
-              )
-            ]
-          )
+                  ),
+                  ListTile(
+                      leading: Icon(Icons.delete),
+                      title: Text("Trash"),
+                      trailing: Text(countDeleted().toString()),
+                      onTap: () {
+                        // Close drawer
+                        Navigator.pop(context);
+
+                        // Open trash screen
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (context) =>
+                                TrashScreen(
+                                    memories: this.memories,
+                                    storage: this.widget.storage
+                                )
+                        ));
+                      }
+                  )
+                ]
+            )
         ),
         floatingActionButton: FloatingActionButton(
             onPressed: () {
               showModalBottomSheet(context: context,
                   builder: (BuildContext context) {
                     return ButtonBar(
-                      children: <Widget>[
-                        // TODO: Add photo feature
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Ink(
-                                decoration: ShapeDecoration(
-                                    color: Colors.blue,
-                                    shape: CircleBorder()
+                        children: <Widget>[
+                          Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Ink(
+                                    decoration: ShapeDecoration(
+                                        color: Colors.blue,
+                                        shape: CircleBorder()
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.photo_album),
+                                      color: Colors.white,
+                                      onPressed: () {
+                                        this.getImage().then((File image) {
+                                          Navigator.pushReplacement(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      AddMemoryScreen(
+                                                          memories:
+                                                          this.memories,
+                                                          storage:
+                                                          this.widget
+                                                              .storage,
+                                                          image: image
+                                                      )
+                                              )
+                                          );
+                                        });
+                                      }
+                                    )
                                 ),
-                                child: IconButton(
-                                  icon: Icon(Icons.photo_album),
-                                  color: Colors.white,
-                                  onPressed: () {
-                                    Navigator.pushReplacement(context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                AddMemoryScreen(
-                                                    memories: this.memories,
-                                                    storage: this.widget.storage
-                                                )
-                                        )
-                                    );
-                                  },
+                                Padding(
+                                    padding: EdgeInsets.only(
+                                        top: HomeScreen.BUTTONS_TEXT_PADDING
+                                    ),
+                                    child: Text(
+                                        "Photo",
+                                        maxLines: 1
+                                    )
                                 )
-                            ),
-                            Padding(
-                                padding: EdgeInsets.only(
-                                    top: HomeScreen.BUTTONS_TEXT_PADDING
+                              ]
+                          ),
+                          Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Ink(
+                                    decoration: ShapeDecoration(
+                                        color: Colors.blue,
+                                        shape: CircleBorder()
+                                    ),
+                                    child: IconButton(
+                                      icon: Icon(Icons.edit),
+                                      color: Colors.white,
+                                      onPressed: () {
+                                        Navigator.pushReplacement(context,
+                                            MaterialPageRoute(
+                                                builder: (context) =>
+                                                    AddMemoryScreen(
+                                                        memories: this.memories,
+                                                        storage:
+                                                          this.widget.storage
+                                                    )
+                                            )
+                                        );
+                                      },
+                                    )
                                 ),
-                                child: Text(
-                                    "Photo",
-                                    maxLines: 1
+                                Padding(
+                                    padding: EdgeInsets.only(
+                                        top: HomeScreen.BUTTONS_TEXT_PADDING
+                                    ),
+                                    child: Text(
+                                        "Text",
+                                        maxLines: 1
+                                    )
                                 )
-                            )
-                          ]
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Ink(
-                                decoration: ShapeDecoration(
-                                    color: Colors.blue,
-                                    shape: CircleBorder()
-                                ),
-                                child: IconButton(
-                                  icon: Icon(Icons.edit),
-                                  color: Colors.white,
-                                  onPressed: () {
-                                    Navigator.pushReplacement(context,
-                                        MaterialPageRoute(
-                                            builder: (context) =>
-                                                AddMemoryScreen(
-                                                    memories: this.memories,
-                                                    storage: this.widget.storage
-                                                )
-                                        )
-                                    );
-                                  },
-                                )
-                            ),
-                            Padding(
-                              padding: EdgeInsets.only(
-                                  top: HomeScreen.BUTTONS_TEXT_PADDING
-                              ),
-                              child: Text(
-                                  "Text",
-                                  maxLines: 1
-                              )
-                            )
-                          ]
-                        )
-                      ]
+                              ]
+                          )
+                        ]
                     );
                   }
               );

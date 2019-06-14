@@ -1,15 +1,16 @@
-name: fuzzy
-description: Fuzzy application for Android.
+name: fuzzy_1
+description: A virtual positive memory album.
 version: 1.0.0+1
 
 environment:
-  sdk: ">=2.0.0-dev.68.0 <3.0.0"
+  sdk: ">=2.1.0 <3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^0.1.2
-  path_provider: ^0.4.1
+  path_provider: ^1.1.0
+  image_picker: ^0.6.0+9
 
 dev_dependencies:
   flutter_test:
