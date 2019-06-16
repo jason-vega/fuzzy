@@ -834,7 +834,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int counter = 0;
 
     for (Memory memory in this.memories) {
-      if (memory.favorite) {
+      if (memory.favorite == true) {
         counter++;
       }
     }
