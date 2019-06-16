@@ -24,9 +24,7 @@ class FuzzyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomeScreen(
-          storage: DataStorage()
-      ),
+      home: HomeScreen(storage: DataStorage()),
     );
   }
 }
@@ -51,7 +49,7 @@ class DataStorage {
   Future<File> _createNewImageFile(File image) async {
     final path = await _localPath;
     final File newImage =
-      await image.copy('$path/${Path.basename(image.path)}');
+        await image.copy('$path/${Path.basename(image.path)}');
 
     return newImage;
   }
@@ -68,8 +66,7 @@ class DataStorage {
       return jsonMemories.map((dynamic memory) {
         return Memory.fromJson(jsonDecode(memory));
       }).toList();
-    }
-    catch (e) {
+    } catch (e) {
       /// On error, create the file and return an empty list.
       file.create();
       return [];
@@ -104,8 +101,8 @@ class Memory {
   Memory(this.comment, this.author, this.date, [this.imageUrl]);
 
   /// Construct a memory from a JSON object [json]
-  Memory.fromJson(Map<String, dynamic> json) :
-        this.comment = json["comment"],
+  Memory.fromJson(Map<String, dynamic> json)
+      : this.comment = json["comment"],
         this.author = json["author"],
         this.date = DateTime.parse(json["date"]),
         this.imageUrl = json["imageUrl"],
@@ -113,8 +110,7 @@ class Memory {
         this.favorite = json["favorite"];
 
   /// Returns a JSON object representation of this Memory.
-  Map<String, dynamic> toJson() =>
-      {
+  Map<String, dynamic> toJson() => {
         "comment": this.comment,
         "author": this.author,
         "date": this.date.toIso8601String(),
@@ -125,9 +121,13 @@ class Memory {
 
   /// Returns date and time as a formatted String.
   static String dateTimeToString(BuildContext context, DateTime date) =>
-      date.month.toString() + "/" + date.day.toString() +
-          "/" + date.year.toString() + " at " +
-          TimeOfDay.fromDateTime(date).format(context);
+      date.month.toString() +
+      "/" +
+      date.day.toString() +
+      "/" +
+      date.year.toString() +
+      " at " +
+      TimeOfDay.fromDateTime(date).format(context);
 
   /// Permanently delete this memory.
   Future<void> delete(List<Memory> memories, DataStorage storage) async {
@@ -140,29 +140,27 @@ class Memory {
   }
 
   /// Remove this memory from the trash.
-  Future<void> restore(List<Memory> memories,
-      DataStorage storage) async {
+  Future<void> restore(List<Memory> memories, DataStorage storage) async {
     this.deleted = false;
     storage.saveMemories(memories);
   }
 
   /// Move this memory to trash.
-  Future<void> moveToTrash(List<Memory> memories,
-      DataStorage storage) async {
+  Future<void> moveToTrash(List<Memory> memories, DataStorage storage) async {
     this.deleted = true;
     storage.saveMemories(memories);
   }
 
   /// Add this memory to favorites list.
-  Future<void> addToFavorites(List<Memory> memories,
-      DataStorage storage) async {
+  Future<void> addToFavorites(
+      List<Memory> memories, DataStorage storage) async {
     this.favorite = true;
     storage.saveMemories(memories);
   }
 
   /// Remove this memory to favorites list.
-  Future<void> removeFromFavorites(List<Memory> memories,
-      DataStorage storage) async {
+  Future<void> removeFromFavorites(
+      List<Memory> memories, DataStorage storage) async {
     this.favorite = false;
     storage.saveMemories(memories);
   }
@@ -198,16 +196,15 @@ class MemoryCard extends StatelessWidget {
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  (this.memory.imageUrl != null ?
-                  Image.file(File(this.memory.imageUrl)) :
-                  Text(this.memory.comment,
-                      style: TextStyle(
-                          fontSize: COMMENT_FONT_SIZE,
-                          fontStyle: FontStyle.italic),
-                      textAlign: TextAlign.left,
-                      maxLines: MAX_COMMENT_LINES,
-                      overflow: TextOverflow.ellipsis)
-                  ),
+                  (this.memory.imageUrl != null
+                      ? Image.file(File(this.memory.imageUrl))
+                      : Text(this.memory.comment,
+                          style: TextStyle(
+                              fontSize: COMMENT_FONT_SIZE,
+                              fontStyle: FontStyle.italic),
+                          textAlign: TextAlign.left,
+                          maxLines: MAX_COMMENT_LINES,
+                          overflow: TextOverflow.ellipsis)),
                   Text("— ${this.memory.author}",
                       style: TextStyle(
                           fontSize: AUTHOR_FONT_SIZE,
@@ -218,14 +215,10 @@ class MemoryCard extends StatelessWidget {
                   Text(Memory.dateTimeToString(context, this.memory.date),
                       style: TextStyle(fontSize: DATE_FONT_SIZE),
                       textAlign: TextAlign.right)
-                ]
-            )
-        ),
+                ])),
         margin: EdgeInsets.symmetric(
             vertical: CARD_VERTICAL_MARGIN,
-            horizontal: CARD_HORIZONTAL_MARGIN
-        )
-    );
+            horizontal: CARD_HORIZONTAL_MARGIN));
   }
 }
 
@@ -244,53 +237,45 @@ class DetailScreenAppBar extends PreferredSize {
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-        actions: [
-          IconButton(
-              icon: Icon(Icons.edit),
+    return AppBar(actions: [
+      IconButton(
+          icon: Icon(Icons.edit),
+          onPressed: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => AddMemoryScreen(
+                          memories: this.memories,
+                          storage: this.storage,
+                          memoryToEdit: this.memory,
+                        )));
+          }),
+      IconButton(
+          icon: Icon(Icons.delete),
+          onPressed: () {
+            String message;
+
+            if (!this.memory.deleted) {
+              // Memory is not in trash can
+              this.memory.moveToTrash(this.memories, this.storage);
+              message = "Moved to trash.";
+            } else {
+              this.memory.delete(this.memories, this.storage);
+              message = "Deleted.";
+            }
+
+            Navigator.pop(context, message);
+          }),
+      Visibility(
+          visible: this.memory.deleted,
+          child: IconButton(
+              icon: Icon(Icons.restore_from_trash),
               onPressed: () {
-                Navigator.push(context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            AddMemoryScreen(
-                              memories: this.memories,
-                              storage: this.storage,
-                              memoryToEdit: this.memory,
-                            )
-                    )
-                );
-              }
-          ),
-          IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: () {
-                String message;
+                this.memory.restore(this.memories, this.storage);
 
-                if (!this.memory.deleted) { // Memory is not in trash can
-                  this.memory.moveToTrash(this.memories, this.storage);
-                  message = "Moved to trash.";
-                }
-                else {
-                  this.memory.delete(this.memories, this.storage);
-                  message = "Deleted.";
-                }
-
-                Navigator.pop(context, message);
-              }
-          ),
-          Visibility(
-              visible: this.memory.deleted,
-              child: IconButton(
-                  icon: Icon(Icons.restore_from_trash),
-                  onPressed: () {
-                    this.memory.restore(this.memories, this.storage);
-
-                    Navigator.pop(context, "Restored.");
-                  }
-              )
-          )
-        ]
-    );
+                Navigator.pop(context, "Restored.");
+              }))
+    ]);
   }
 }
 
@@ -310,9 +295,12 @@ class DetailScreen extends StatefulWidget {
 
   /// Construct a new DetailScreen to display info on the Memory [memory] stored
   /// in [storage].
-  DetailScreen({Key key, @required this.memory, @required this.memories,
-    @required this.storage}) :
-        super(key: key);
+  DetailScreen(
+      {Key key,
+      @required this.memory,
+      @required this.memories,
+      @required this.storage})
+      : super(key: key);
 
   /// Create the state for this DetailScreen.
   @override
@@ -325,19 +313,17 @@ class _DetailScreenState extends State<DetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: DetailScreenAppBar(this.widget.memory, this.widget.memories,
-         this.widget.storage),
+        appBar: DetailScreenAppBar(
+            this.widget.memory, this.widget.memories, this.widget.storage),
         body: ListView(
             padding: EdgeInsets.all(DetailScreen.SCREEN_PADDING),
             children: <Widget>[
-              (this.widget.memory.imageUrl != null ?
-              Image.file(File(this.widget.memory.imageUrl)) :
-              Text("\"${this.widget.memory.comment}\"",
-                  style: TextStyle(
-                      fontSize: DetailScreen.COMMENT_FONT_SIZE,
-                      fontStyle: FontStyle.italic)
-              )
-              ),
+              (this.widget.memory.imageUrl != null
+                  ? Image.file(File(this.widget.memory.imageUrl))
+                  : Text("\"${this.widget.memory.comment}\"",
+                      style: TextStyle(
+                          fontSize: DetailScreen.COMMENT_FONT_SIZE,
+                          fontStyle: FontStyle.italic))),
               Text(
                 "— ${this.widget.memory.author}",
                 style: TextStyle(fontSize: DetailScreen.AUTHOR_FONT_SIZE),
@@ -348,9 +334,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 style: TextStyle(fontSize: DetailScreen.DATE_FONT_SIZE),
                 textAlign: TextAlign.right,
               )
-            ]
-        )
-    );
+            ]));
   }
 }
 
@@ -363,26 +347,28 @@ class AddMemoryScreen extends StatelessWidget {
 
   /// Create a new AddMemoryScreen where current memories are [memories] stored
   /// in [storage].
-  AddMemoryScreen({Key key, @required this.memories, @required this.storage,
-    this.memoryToEdit, this.image}) :
-        super(key: key);
+  AddMemoryScreen(
+      {Key key,
+      @required this.memories,
+      @required this.storage,
+      this.memoryToEdit,
+      this.image})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-            title: Text(this.memoryToEdit != null ?
-            "Edit Memory" : "Add Memory")
-        ),
+            title:
+                Text(this.memoryToEdit != null ? "Edit Memory" : "Add Memory")),
         body: AddMemoryForm(
             memories: this.memories,
             storage: this.storage,
             memoryToEdit: this.memoryToEdit,
-            image: (this.memoryToEdit != null &&
-                this.memoryToEdit.imageUrl != null ?
-                File(this.memoryToEdit.imageUrl) : this.image)
-        )
-    );
+            image:
+                (this.memoryToEdit != null && this.memoryToEdit.imageUrl != null
+                    ? File(this.memoryToEdit.imageUrl)
+                    : this.image)));
   }
 }
 
@@ -399,9 +385,13 @@ class AddMemoryForm extends StatefulWidget {
 
   /// Create a new AddMemoryForm where current memories are [memories] stored in
   /// [storage].
-  AddMemoryForm({Key key, @required this.memories, @required this.storage,
-    this.memoryToEdit, this.image}) :
-        super(key: key);
+  AddMemoryForm(
+      {Key key,
+      @required this.memories,
+      @required this.storage,
+      this.memoryToEdit,
+      this.image})
+      : super(key: key);
 
   /// Create the state for this AddMemoryForm.
   @override
@@ -425,13 +415,14 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
   void initState() {
     super.initState();
 
-    commentController.text = this.widget.memoryToEdit != null ?
-    this.widget.memoryToEdit.comment : "";
-    authorController.text = this.widget.memoryToEdit != null ?
-    this.widget.memoryToEdit.author : "";
+    commentController.text = this.widget.memoryToEdit != null
+        ? this.widget.memoryToEdit.comment
+        : "";
+    authorController.text =
+        this.widget.memoryToEdit != null ? this.widget.memoryToEdit.author : "";
 
-    _chosenDate = this.widget.memoryToEdit != null ?
-    this.widget.memoryToEdit.date : null;
+    _chosenDate =
+        this.widget.memoryToEdit != null ? this.widget.memoryToEdit.date : null;
   }
 
   /// Clean up any resources used by the controllers.
@@ -452,8 +443,8 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
   }
 
   /// Edit this [memory] and save the edit to the data file.
-  Future<void> editMemory(Memory memory, String comment, String author,
-      DateTime date) async {
+  Future<void> editMemory(
+      Memory memory, String comment, String author, DateTime date) async {
     memory.comment = comment;
     memory.author = author;
     memory.date = date;
@@ -464,24 +455,23 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
   /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
-    dateController.text = this._chosenDate != null ?
-    Memory.dateTimeToString(context, this._chosenDate) : "";
+    dateController.text = this._chosenDate != null
+        ? Memory.dateTimeToString(context, this._chosenDate)
+        : "";
 
     return SingleChildScrollView(
         padding: EdgeInsets.all(AddMemoryForm.SCREEN_PADDING),
         child: Form(
             key: _addMemoryFormKey,
-            child: Column(
-                children: <Widget>[
-                  (this.widget.image != null ?
-                  Image.file(this.widget.image) :
-                  TextFormField(
+            child: Column(children: <Widget>[
+              (this.widget.image != null
+                  ? Image.file(this.widget.image)
+                  : TextFormField(
                       controller: commentController,
                       decoration: InputDecoration(
                           suffixIcon: Icon(Icons.comment),
                           border: OutlineInputBorder(),
-                          labelText: "Comment"
-                      ),
+                          labelText: "Comment"),
                       maxLines: null,
                       //AddMemoryForm.MAXIMUM_COMMENT_LINES,
                       keyboardType: TextInputType.multiline,
@@ -489,149 +479,119 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
                         if (value.isEmpty) {
                           return "Please enter a comment.";
                         }
+                      })),
+              Padding(
+                padding:
+                    EdgeInsets.only(top: AddMemoryForm.INPUT_VERTICAL_PADDING),
+                child: TextFormField(
+                    controller: authorController,
+                    decoration: InputDecoration(
+                        suffixIcon: Icon(Icons.person),
+                        border: OutlineInputBorder(),
+                        labelText: "Author"),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return "Please enter an author.";
                       }
-                  )
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                        top: AddMemoryForm.INPUT_VERTICAL_PADDING
-                    ),
-                    child: TextFormField(
-                        controller: authorController,
-                        decoration: InputDecoration(
-                            suffixIcon: Icon(Icons.person),
-                            border: OutlineInputBorder(),
-                            labelText: "Author"
-                        ),
-                        validator: (value) {
-                          if (value.isEmpty) {
-                            return "Please enter an author.";
-                          }
-                        }
-                    ),
-                  ),
-                  Padding(
-                    padding: EdgeInsets.only(
-                        top: AddMemoryForm.INPUT_VERTICAL_PADDING
-                    ),
-                    child:
-                    FlatButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () {
-                          showDatePicker(
+                    }),
+              ),
+              Padding(
+                padding:
+                    EdgeInsets.only(top: AddMemoryForm.INPUT_VERTICAL_PADDING),
+                child: FlatButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      showDatePicker(
                               context: context,
-                              initialDate: this._chosenDate != null ?
-                              this._chosenDate : DateTime.now(),
+                              initialDate: this._chosenDate != null
+                                  ? this._chosenDate
+                                  : DateTime.now(),
                               firstDate: DateTime(EPOCH_YEAR),
-                              lastDate: DateTime.now()
-                          ).then((DateTime chosenDate) {
-                            if (chosenDate != null) {
-                              showTimePicker(
-                                context: context,
-                                initialTime: this._chosenDate != null ?
-                                TimeOfDay.fromDateTime(this._chosenDate) :
-                                TimeOfDay.now(),
-                              ).then((TimeOfDay chosenTime) {
-                                if (chosenTime != null) {
-                                  setState(() {
-                                    this._chosenDate = DateTime(
-                                        chosenDate.year,
-                                        chosenDate.month,
-                                        chosenDate.day,
-                                        chosenTime.hour,
-                                        chosenTime.minute
-                                    );
-                                  });
-                                }
+                              lastDate: DateTime.now())
+                          .then((DateTime chosenDate) {
+                        if (chosenDate != null) {
+                          showTimePicker(
+                            context: context,
+                            initialTime: this._chosenDate != null
+                                ? TimeOfDay.fromDateTime(this._chosenDate)
+                                : TimeOfDay.now(),
+                          ).then((TimeOfDay chosenTime) {
+                            if (chosenTime != null) {
+                              setState(() {
+                                this._chosenDate = DateTime(
+                                    chosenDate.year,
+                                    chosenDate.month,
+                                    chosenDate.day,
+                                    chosenTime.hour,
+                                    chosenTime.minute);
                               });
                             }
                           });
-                        },
-                        child: TextFormField(
-                            controller: dateController,
-                            enabled: false,
-                            decoration: InputDecoration(
-                                suffixIcon: Icon(Icons.calendar_today),
-                                border: OutlineInputBorder(),
-                                disabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                        color: Colors.grey[600]
-                                    )
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                        color: Colors.red
-                                    )
-                                ),
-                                errorStyle: TextStyle(
-                                    color: Colors.red
-                                ),
-                                labelText: "Date",
-                                labelStyle: TextStyle(
-                                    color: Colors.grey[600]
-                                )
-                            ),
-                            validator: (value) {
-                              if (value.isEmpty) {
-                                return "Please select a date.";
-                              }
-                            }
-                        )
-                    ),
-                  ),
-                  Padding(
-                      padding: EdgeInsets.only(
-                          top: AddMemoryForm.INPUT_VERTICAL_PADDING
-                      ),
-                      child: RaisedButton(
-                          onPressed: () {
-                            if (_addMemoryFormKey.currentState.validate()) {
-                              if (this.widget.memoryToEdit != null) {
-                                this.editMemory(this.widget.memoryToEdit,
+                        }
+                      });
+                    },
+                    child: TextFormField(
+                        controller: dateController,
+                        enabled: false,
+                        decoration: InputDecoration(
+                            suffixIcon: Icon(Icons.calendar_today),
+                            border: OutlineInputBorder(),
+                            disabledBorder: OutlineInputBorder(
+                                borderSide:
+                                    BorderSide(color: Colors.grey[600])),
+                            errorBorder: OutlineInputBorder(
+                                borderSide: BorderSide(color: Colors.red)),
+                            errorStyle: TextStyle(color: Colors.red),
+                            labelText: "Date",
+                            labelStyle: TextStyle(color: Colors.grey[600])),
+                        validator: (value) {
+                          if (value.isEmpty) {
+                            return "Please select a date.";
+                          }
+                        })),
+              ),
+              Padding(
+                  padding: EdgeInsets.only(
+                      top: AddMemoryForm.INPUT_VERTICAL_PADDING),
+                  child: RaisedButton(
+                      onPressed: () {
+                        if (_addMemoryFormKey.currentState.validate()) {
+                          if (this.widget.memoryToEdit != null) {
+                            this.editMemory(
+                                this.widget.memoryToEdit,
+                                commentController.text,
+                                authorController.text,
+                                this._chosenDate);
+
+                            /// Return to original detail screen.
+                            Navigator.pop(context);
+                          } else {
+                            Memory memory = (this.widget.image != null
+                                ? Memory(
                                     commentController.text,
                                     authorController.text,
-                                    this._chosenDate);
-
-                                /// Return to original detail screen.
-                                Navigator.pop(context);
-                              }
-                              else {
-                                Memory memory = (this.widget.image != null ?
-                                Memory(commentController.text,
-                                    authorController.text,
                                     this._chosenDate,
-                                    this.widget.image.path) :
-                                Memory(commentController.text,
-                                    authorController.text,
-                                    this._chosenDate)
-                                );
+                                    this.widget.image.path)
+                                : Memory(commentController.text,
+                                    authorController.text, this._chosenDate));
 
-                                this.saveMemory(memory);
+                            this.saveMemory(memory);
 
-                                /// Opens new detail screen of new memory. Back
-                                /// button pressed on detail screen returns to
-                                /// home screen.
-                                Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            DetailScreen(
-                                                memory: memory,
-                                                memories: this.widget.memories,
-                                                storage: this.widget.storage
-                                            )
-                                    )
-                                );
-                              }
-                            }
-                          },
-                          child: Text('Save')
-                      )
-                  )
-                ]
-            )
-        )
-    );
+                            /// Opens new detail screen of new memory. Back
+                            /// button pressed on detail screen returns to
+                            /// home screen.
+                            Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => DetailScreen(
+                                        memory: memory,
+                                        memories: this.widget.memories,
+                                        storage: this.widget.storage)));
+                          }
+                        }
+                      },
+                      child: Text('Save')))
+            ])));
   }
 }
 
@@ -642,8 +602,8 @@ class TrashScreen extends StatefulWidget {
 
   /// Create a new TrashScreen where current memories are [memories] stored in
   /// [storage].
-  TrashScreen({Key key, @required this.memories, @required this.storage}) :
-        super(key: key);
+  TrashScreen({Key key, @required this.memories, @required this.storage})
+      : super(key: key);
 
   /// Create the state for this TrashScreen.
   @override
@@ -665,13 +625,9 @@ class _TrashScreenState extends State<TrashScreen> {
                     builder: (context) => DetailScreen(
                         memory: memory,
                         memories: this.widget.memories,
-                        storage: this.widget.storage
-                    )
-                )
-            );
+                        storage: this.widget.storage)));
           },
-          child: MemoryCard(memory)
-      );
+          child: MemoryCard(memory));
     }).toList();
   }
 
@@ -679,13 +635,8 @@ class _TrashScreenState extends State<TrashScreen> {
   @override
   Widget build(BuildContext build) {
     return Scaffold(
-        appBar: AppBar(
-            title: Text("Trash")
-        ),
-        body: ListView(
-            children: this.buildDeletedMemoryList()
-        )
-    );
+        appBar: AppBar(title: Text("Trash")),
+        body: ListView(children: this.buildDeletedMemoryList()));
   }
 }
 
@@ -696,8 +647,8 @@ class FavoritesScreen extends StatefulWidget {
 
   /// Create a new FavoritesScreen where current memories are [memories] stored
   /// in [storage].
-  FavoritesScreen({Key key, @required this.memories, @required this.storage}) :
-        super(key: key);
+  FavoritesScreen({Key key, @required this.memories, @required this.storage})
+      : super(key: key);
 
   /// Create the state for this FavoritesScreen.
   @override
@@ -719,26 +670,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     builder: (context) => DetailScreen(
                         memory: memory,
                         memories: this.widget.memories,
-                        storage: this.widget.storage
-                    )
-                )
-            );
+                        storage: this.widget.storage)));
           },
-          child: MemoryCard(memory)
-      );
+          child: MemoryCard(memory));
     }).toList();
   }
+
   /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext build) {
     return Scaffold(
-        appBar: AppBar(
-            title: Text("Favorites")
-        ),
-        body: ListView(
-            children: this.buildFavoritesMemoryList()
-        )
-    );
+        appBar: AppBar(title: Text("Favorites")),
+        body: ListView(children: this.buildFavoritesMemoryList()));
   }
 }
 
@@ -785,21 +728,20 @@ class _HomeScreenState extends State<HomeScreen> {
     return this.memories.reversed.where((Memory memory) {
       return memory.deleted == false;
     }).map((Memory memory) {
-      return {"card": GestureDetector(
-          onTap: () {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => DetailScreen(
-                        memory: memory,
-                        memories: this.memories,
-                        storage: this.widget.storage
-                    )
-                )
-            );
-          },
-          child: MemoryCard(memory)
-      ), "memoryListIndex": this.memories.indexOf(memory)};
+      return {
+        "card": GestureDetector(
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => DetailScreen(
+                          memory: memory,
+                          memories: this.memories,
+                          storage: this.widget.storage)));
+            },
+            child: MemoryCard(memory)),
+        "memoryListIndex": this.memories.indexOf(memory)
+      };
     }).toList();
   }
 
@@ -855,269 +797,192 @@ class _HomeScreenState extends State<HomeScreen> {
     List<Map<String, dynamic>> memoryCardList = this.buildMemoryCardList();
 
     return Scaffold(
-        appBar: AppBar(
-            title: Text("Memories")
-        ),
+        appBar: AppBar(title: Text("Memories")),
         body: Center(
             child: ListView.builder(
-              padding: EdgeInsets.symmetric(
-                  vertical: HomeScreen.CARD_LIST_INSET
-              ),
-              itemCount: memoryCardList.length,
-              itemBuilder: (context, index) {
-                final memoryCard = memoryCardList[index];
-                final memory = this.memories[memoryCard["memoryListIndex"]];
+          padding: EdgeInsets.symmetric(vertical: HomeScreen.CARD_LIST_INSET),
+          itemCount: memoryCardList.length,
+          itemBuilder: (context, index) {
+            final memoryCard = memoryCardList[index];
+            final memory = this.memories[memoryCard["memoryListIndex"]];
 
-                return Dismissible(
-                    key: Key("MemoryCard " +
-                        memoryCard["memoryListIndex"].toString()),
-                    onDismissed: (direction) {
-                      if (direction == DismissDirection.endToStart) {
-                        setState(() {
-                          memory.moveToTrash(this.memories,
-                              this.widget.storage);
-                        });
+            return Dismissible(
+                key: Key(
+                    "MemoryCard " + memoryCard["memoryListIndex"].toString()),
+                onDismissed: (direction) {
+                  if (direction == DismissDirection.endToStart) {
+                    setState(() {
+                      memory.moveToTrash(this.memories, this.widget.storage);
+                    });
 
-                        Scaffold.of(context).showSnackBar(
-                            SnackBar(content: Text("Moved to trash.")));
-                      }
-                    },
-                    confirmDismiss: (direction) {
-                      bool isDeleteDirection = direction ==
-                          DismissDirection.endToStart;
+                    Scaffold.of(context).showSnackBar(
+                        SnackBar(content: Text("Moved to trash.")));
+                  }
+                },
+                confirmDismiss: (direction) {
+                  bool isDeleteDirection =
+                      direction == DismissDirection.endToStart;
 
-                      if (!isDeleteDirection) { // Add memory to favorites
-                        if (memory.favorite == false) {
-                          setState(() {
-                            memory.addToFavorites(this.memories,
-                                this.widget.storage);
-                          });
+                  if (!isDeleteDirection) {
+                    // Add memory to favorites
+                    if (memory.favorite == true) {
+                      setState(() {
+                        memory.removeFromFavorites(
+                            this.memories, this.widget.storage);
+                      });
 
-                          Scaffold.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text("Added to favorites.")
-                              )
-                          );
-                        }
-                        else {
-                          setState(() {
-                            memory.removeFromFavorites(this.memories,
-                                this.widget.storage);
-                          });
+                      Scaffold.of(context).showSnackBar(
+                          SnackBar(content: Text("Removed from favorites.")));
+                    } else {
+                      setState(() {
+                        memory.addToFavorites(
+                            this.memories, this.widget.storage);
+                      });
 
-                          Scaffold.of(context).showSnackBar(
-                              SnackBar(
-                                  content: Text("Removed from favorites.")
-                              )
-                          );
-                        }
-                      }
+                      Scaffold.of(context).showSnackBar(
+                          SnackBar(content: Text("Added to favorites.")));
+                    }
+                  }
 
-                      return Future.value(isDeleteDirection);
-                    },
-                    background: Container(
-                      color: Colors.green,
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.all(
-                          HomeScreen.DISMISSIBLE_BACKGROUND_PADDING
-                      ),
-                      child: Icon(
-                        (memory.favorite == true ?
-                        Icons.star :
-                        Icons.star_border),
-                        color: Colors.white,
-                        size: HomeScreen.DISMISSIBLE_ICON_SIZE,
-                      ),
-                    ),
-                    secondaryBackground: Container(
-                      color: Colors.red,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.all(
-                          HomeScreen.DISMISSIBLE_BACKGROUND_PADDING
-                      ),
-                      child: Icon(
-                        Icons.delete,
-                        color: Colors.white,
-                        size: HomeScreen.DISMISSIBLE_ICON_SIZE,
-                      ),
-                    ),
-                    child: memoryCard["card"]
-                );
-              },
-            )
-        ),
+                  return Future.value(isDeleteDirection);
+                },
+                background: Container(
+                  color: Colors.green,
+                  alignment: Alignment.centerLeft,
+                  padding:
+                      EdgeInsets.all(HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
+                  child: Icon(
+                    (memory.favorite == true ? Icons.star : Icons.star_border),
+                    color: Colors.white,
+                    size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                  ),
+                ),
+                secondaryBackground: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding:
+                      EdgeInsets.all(HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
+                  child: Icon(
+                    Icons.delete,
+                    color: Colors.white,
+                    size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                  ),
+                ),
+                child: memoryCard["card"]);
+          },
+        )),
         drawer: Drawer(
-            child: ListView(
-                children: <Widget>[
-                  DrawerHeader(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Icon(
-                                    Icons.cloud_queue,
-                                    size: HomeScreen.MEMORY_COUNT_FONT_SIZE
-                                ),
-                                Padding(
-                                    padding: EdgeInsets.only(
-                                        left: HomeScreen.MEMORY_COUNT_PADDING
-                                    ),
-                                    child: Text(
-                                        this.countSaved().toString(),
-                                        style: TextStyle(
-                                            fontSize:
-                                            HomeScreen.MEMORY_COUNT_FONT_SIZE,
-                                            fontWeight: FontWeight.w300
-                                        )
-                                    )
-                                )
-                              ]
-                          ),
-                          Text(
-                              "saved " + (this.countSaved() == 1 ? "memory" :
-                                  "memories"),
-                              style: TextStyle(
-                                  fontSize:
-                                  HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
-                                  fontWeight: FontWeight.w300
-                              )
-                          )
-                        ],
-                      )
-                  ),
-                  ListTile(
-                      leading: Icon(Icons.star),
-                      title: Text("Favorites"),
-                      trailing: Text(this.countFavorites().toString()),
-                      onTap: () {
-                        // Close drawer
-                        Navigator.pop(context);
+            child: ListView(children: <Widget>[
+          DrawerHeader(
+              child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                Icon(Icons.cloud_queue,
+                    size: HomeScreen.MEMORY_COUNT_FONT_SIZE),
+                Padding(
+                    padding:
+                        EdgeInsets.only(left: HomeScreen.MEMORY_COUNT_PADDING),
+                    child: Text(this.countSaved().toString(),
+                        style: TextStyle(
+                            fontSize: HomeScreen.MEMORY_COUNT_FONT_SIZE,
+                            fontWeight: FontWeight.w300)))
+              ]),
+              Text("saved " + (this.countSaved() == 1 ? "memory" : "memories"),
+                  style: TextStyle(
+                      fontSize: HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
+                      fontWeight: FontWeight.w300))
+            ],
+          )),
+          ListTile(
+              leading: Icon(Icons.star),
+              title: Text("Favorites"),
+              trailing: Text(this.countFavorites().toString()),
+              onTap: () {
+                // Close drawer
+                Navigator.pop(context);
 
-                        // Open trash screen
-                        Navigator.push(context, MaterialPageRoute(
-                            builder: (context) =>
-                                FavoritesScreen(
-                                    memories: this.memories,
-                                    storage: this.widget.storage
-                                )
-                        ));
-                      }
-                  ),
-                  ListTile(
-                      leading: Icon(Icons.delete),
-                      title: Text("Trash"),
-                      trailing: Text(this.countDeleted().toString()),
-                      onTap: () {
-                        // Close drawer
-                        Navigator.pop(context);
+                // Open trash screen
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => FavoritesScreen(
+                            memories: this.memories,
+                            storage: this.widget.storage)));
+              }),
+          ListTile(
+              leading: Icon(Icons.delete),
+              title: Text("Trash"),
+              trailing: Text(this.countDeleted().toString()),
+              onTap: () {
+                // Close drawer
+                Navigator.pop(context);
 
-                        // Open trash screen
-                        Navigator.push(context, MaterialPageRoute(
-                            builder: (context) =>
-                                TrashScreen(
-                                    memories: this.memories,
-                                    storage: this.widget.storage
-                                )
-                        ));
-                      }
-                  )
-                ]
-            )
-        ),
+                // Open trash screen
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => TrashScreen(
+                            memories: this.memories,
+                            storage: this.widget.storage)));
+              })
+        ])),
         floatingActionButton: FloatingActionButton(
             onPressed: () {
-              showModalBottomSheet(context: context,
+              showModalBottomSheet(
+                  context: context,
                   builder: (BuildContext context) {
-                    return ButtonBar(
-                        children: <Widget>[
-                          Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Ink(
-                                    decoration: ShapeDecoration(
-                                        color: Colors.blue,
-                                        shape: CircleBorder()
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(Icons.photo_album),
-                                      color: Colors.white,
-                                      onPressed: () {
-                                        this.getImage().then((File image) {
-                                          Navigator.pushReplacement(
-                                              context,
-                                              MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      AddMemoryScreen(
-                                                          memories:
-                                                          this.memories,
-                                                          storage:
-                                                          this.widget
-                                                              .storage,
-                                                          image: image
-                                                      )
-                                              )
-                                          );
-                                        });
-                                      }
-                                    )
-                                ),
-                                Padding(
-                                    padding: EdgeInsets.only(
-                                        top: HomeScreen.BUTTONS_TEXT_PADDING
-                                    ),
-                                    child: Text(
-                                        "Photo",
-                                        maxLines: 1
-                                    )
-                                )
-                              ]
-                          ),
-                          Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Ink(
-                                    decoration: ShapeDecoration(
-                                        color: Colors.blue,
-                                        shape: CircleBorder()
-                                    ),
-                                    child: IconButton(
-                                      icon: Icon(Icons.edit),
-                                      color: Colors.white,
-                                      onPressed: () {
-                                        Navigator.pushReplacement(context,
-                                            MaterialPageRoute(
-                                                builder: (context) =>
-                                                    AddMemoryScreen(
-                                                        memories: this.memories,
-                                                        storage:
-                                                          this.widget.storage
-                                                    )
-                                            )
-                                        );
-                                      },
-                                    )
-                                ),
-                                Padding(
-                                    padding: EdgeInsets.only(
-                                        top: HomeScreen.BUTTONS_TEXT_PADDING
-                                    ),
-                                    child: Text(
-                                        "Text",
-                                        maxLines: 1
-                                    )
-                                )
-                              ]
-                          )
-                        ]
-                    );
-                  }
-              );
+                    return ButtonBar(children: <Widget>[
+                      Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                        Ink(
+                            decoration: ShapeDecoration(
+                                color: Colors.blue, shape: CircleBorder()),
+                            child: IconButton(
+                                icon: Icon(Icons.photo_album),
+                                color: Colors.white,
+                                onPressed: () {
+                                  this.getImage().then((File image) {
+                                    Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (context) =>
+                                                AddMemoryScreen(
+                                                    memories: this.memories,
+                                                    storage:
+                                                        this.widget.storage,
+                                                    image: image)));
+                                  });
+                                })),
+                        Padding(
+                            padding: EdgeInsets.only(
+                                top: HomeScreen.BUTTONS_TEXT_PADDING),
+                            child: Text("Photo", maxLines: 1))
+                      ]),
+                      Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                        Ink(
+                            decoration: ShapeDecoration(
+                                color: Colors.blue, shape: CircleBorder()),
+                            child: IconButton(
+                              icon: Icon(Icons.edit),
+                              color: Colors.white,
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => AddMemoryScreen(
+                                            memories: this.memories,
+                                            storage: this.widget.storage)));
+                              },
+                            )),
+                        Padding(
+                            padding: EdgeInsets.only(
+                                top: HomeScreen.BUTTONS_TEXT_PADDING),
+                            child: Text("Text", maxLines: 1))
+                      ])
+                    ]);
+                  });
             },
             tooltip: 'Add',
-            child: Icon(Icons.add)
-        )
-    );
+            child: Icon(Icons.add)));
   }
 }
