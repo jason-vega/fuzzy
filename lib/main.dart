@@ -615,7 +615,7 @@ class _TrashScreenState extends State<TrashScreen> {
   /// Returns a list of deleted memories represented as MemoryCards.
   List<Widget> buildDeletedMemoryList() {
     return this.widget.memories.reversed.where((Memory memory) {
-      return memory.deleted == true;
+      return memory.deleted;
     }).map((Memory memory) {
       return GestureDetector(
           onTap: () {
@@ -660,7 +660,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   /// Returns a list of favorite memories represented as MemoryCards.
   List<Widget> buildFavoritesMemoryList() {
     return this.widget.memories.reversed.where((Memory memory) {
-      return memory.favorite == true && memory.deleted == false;
+      return memory.favorite && !memory.deleted;
     }).map((Memory memory) {
       return GestureDetector(
           onTap: () {
@@ -726,7 +726,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Returns a list of non-deleted memories represented as MemoryCards.
   List<Map<String, dynamic>> buildMemoryCardList() {
     return this.memories.reversed.where((Memory memory) {
-      return memory.deleted == false;
+      return !memory.deleted;
     }).map((Memory memory) {
       return {
         "card": GestureDetector(
@@ -750,7 +750,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int counter = 0;
 
     for (Memory memory in this.memories) {
-      if (memory.deleted == false) {
+      if (!memory.deleted) {
         counter++;
       }
     }
@@ -763,7 +763,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int counter = 0;
 
     for (Memory memory in this.memories) {
-      if (memory.deleted == true) {
+      if (memory.deleted) {
         counter++;
       }
     }
@@ -776,7 +776,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int counter = 0;
 
     for (Memory memory in this.memories) {
-      if (memory.favorite == true && memory.deleted == false) {
+      if (memory.favorite && !memory.deleted) {
         counter++;
       }
     }
@@ -825,7 +825,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   if (!isDeleteDirection) {
                     // Add memory to favorites
-                    if (memory.favorite == true) {
+                    if (memory.favorite) {
                       setState(() {
                         memory.removeFromFavorites(
                             this.memories, this.widget.storage);
@@ -852,7 +852,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding:
                       EdgeInsets.all(HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
                   child: Icon(
-                    (memory.favorite == true ? Icons.star : Icons.star_border),
+                    (memory.favorite ? Icons.star : Icons.star_border),
                     color: Colors.white,
                     size: HomeScreen.DISMISSIBLE_ICON_SIZE,
                   ),
