@@ -97,6 +97,7 @@ class Memory {
   String author;
   DateTime date;
   bool deleted = false;
+  bool favorite = false;
 
   /// Construct a new Memory with the specified [comment], [author], [date] and
   /// whether or not it is an [image].
@@ -108,7 +109,8 @@ class Memory {
         this.author = json["author"],
         this.date = DateTime.parse(json["date"]),
         this.imageUrl = json["imageUrl"],
-        this.deleted = json["deleted"];
+        this.deleted = json["deleted"],
+        this.favorite = json["favorite"];
 
   /// Returns a JSON object representation of this Memory.
   Map<String, dynamic> toJson() =>
@@ -117,7 +119,8 @@ class Memory {
         "author": this.author,
         "date": this.date.toIso8601String(),
         "imageUrl": this.imageUrl,
-        "deleted": this.deleted
+        "deleted": this.deleted,
+        "favorite": this.favorite
       };
 
   /// Returns date and time as a formatted String.
@@ -125,6 +128,44 @@ class Memory {
       date.month.toString() + "/" + date.day.toString() +
           "/" + date.year.toString() + " at " +
           TimeOfDay.fromDateTime(date).format(context);
+
+  /// Permanently delete this memory.
+  Future<void> delete(List<Memory> memories, DataStorage storage) async {
+    /*if (this.widget.memory.imageUrl != null) {
+      File(this.widget.memory.imageUrl).delete();
+    }*/
+
+    memories.remove(this);
+    storage.saveMemories(memories);
+  }
+
+  /// Remove this memory from the trash.
+  Future<void> restore(List<Memory> memories,
+      DataStorage storage) async {
+    this.deleted = false;
+    storage.saveMemories(memories);
+  }
+
+  /// Move this memory to trash.
+  Future<void> moveToTrash(List<Memory> memories,
+      DataStorage storage) async {
+    this.deleted = true;
+    storage.saveMemories(memories);
+  }
+
+  /// Add this memory to favorites list.
+  Future<void> addToFavorites(List<Memory> memories,
+      DataStorage storage) async {
+    this.favorite = true;
+    storage.saveMemories(memories);
+  }
+
+  /// Remove this memory to favorites list.
+  Future<void> removeFromFavorites(List<Memory> memories,
+      DataStorage storage) async {
+    this.favorite = false;
+    storage.saveMemories(memories);
+  }
 }
 
 /// Represents a physical display of a Memory.
@@ -188,6 +229,71 @@ class MemoryCard extends StatelessWidget {
   }
 }
 
+/// An AppBar widget for the DetailScreen.
+class DetailScreenAppBar extends PreferredSize {
+  Memory memory;
+  List<Memory> memories;
+  DataStorage storage;
+
+  DetailScreenAppBar(this.memory, this.memories, this.storage);
+
+  @override
+  Size get preferredSize {
+    return Size.fromHeight(kToolbarHeight);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+        actions: [
+          IconButton(
+              icon: Icon(Icons.edit),
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            AddMemoryScreen(
+                              memories: this.memories,
+                              storage: this.storage,
+                              memoryToEdit: this.memory,
+                            )
+                    )
+                );
+              }
+          ),
+          IconButton(
+              icon: Icon(Icons.delete),
+              onPressed: () {
+                String message;
+
+                if (!this.memory.deleted) { // Memory is not in trash can
+                  this.memory.moveToTrash(this.memories, this.storage);
+                  message = "Moved to trash.";
+                }
+                else {
+                  this.memory.delete(this.memories, this.storage);
+                  message = "Deleted.";
+                }
+
+                Navigator.pop(context, message);
+              }
+          ),
+          Visibility(
+              visible: this.memory.deleted,
+              child: IconButton(
+                  icon: Icon(Icons.restore_from_trash),
+                  onPressed: () {
+                    this.memory.restore(this.memories, this.storage);
+
+                    Navigator.pop(context, "Restored.");
+                  }
+              )
+          )
+        ]
+    );
+  }
+}
+
 /// Detail screen for a MemoryCard.
 class DetailScreen extends StatefulWidget {
   static const double SCREEN_PADDING = 16;
@@ -215,87 +321,12 @@ class DetailScreen extends StatefulWidget {
 
 /// The state for a DetailScreen.
 class _DetailScreenState extends State<DetailScreen> {
-  /// Move this memory to trash.
-  Future<void> moveMemoryToTrash() async {
-    this.widget.memory.deleted = true;
-
-    this.widget.storage.saveMemories(this.widget.memories);
-  }
-
-  /// Permanently delete this memory.
-  Future<void> deleteMemory() async {
-    /*if (this.widget.memory.imageUrl != null) {
-      File(this.widget.memory.imageUrl).delete();
-    }*/
-
-    this.widget.memories.remove(this.widget.memory);
-
-    this.widget.storage.saveMemories(this.widget.memories);
-  }
-
-  /// Remove this memory from the trash.
-  Future<void> restoreMemory() async {
-    this.widget.memory.deleted = false;
-
-    this.widget.storage.saveMemories(this.widget.memories);
-  }
-
-  /// Return a list of screen actions based on whether or not the memory is
-  /// currently in the trash.
-  List<Widget> getScreenActions(BuildContext context) {
-    List<Widget> actions = [
-      IconButton(
-          icon: Icon(Icons.edit),
-          onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(
-                    builder: (context) => AddMemoryScreen(
-                        memories: this.widget.memories,
-                        storage: this.widget.storage,
-                        memoryToEdit: this.widget.memory,
-                    )
-                )
-            );
-          }
-      ),
-      IconButton(
-          icon: Icon(Icons.delete),
-          onPressed: () {
-            if (!this.widget.memory.deleted) { // Memory is not in trash can
-              this.moveMemoryToTrash();
-            }
-            else {
-              this.deleteMemory();
-            }
-
-            // Return home
-            Navigator.pop(context);
-          }
-      )
-    ];
-
-    if (this.widget.memory.deleted) { // Memory is already in trash can
-      actions.insert(DetailScreen.RESTORE_BUTTON_INDEX, IconButton(
-          icon: Icon(Icons.restore_from_trash),
-          onPressed: () {
-            this.restoreMemory();
-
-            // Return home
-            Navigator.pop(context);
-          }
-      ));
-    }
-
-    return actions;
-  }
-
   /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-            actions: getScreenActions(context)
-        ),
+        appBar: DetailScreenAppBar(this.widget.memory, this.widget.memories,
+         this.widget.storage),
         body: ListView(
             padding: EdgeInsets.all(DetailScreen.SCREEN_PADDING),
             children: <Widget>[
@@ -658,6 +689,59 @@ class _TrashScreenState extends State<TrashScreen> {
   }
 }
 
+/// Represents a screen displaying a list of favorite memories.
+class FavoritesScreen extends StatefulWidget {
+  final List<Memory> memories;
+  final DataStorage storage;
+
+  /// Create a new FavoritesScreen where current memories are [memories] stored
+  /// in [storage].
+  FavoritesScreen({Key key, @required this.memories, @required this.storage}) :
+        super(key: key);
+
+  /// Create the state for this FavoritesScreen.
+  @override
+  _FavoritesScreenState createState() => _FavoritesScreenState();
+}
+
+/// The state for a FavoritesScreen.
+class _FavoritesScreenState extends State<FavoritesScreen> {
+  /// Returns a list of favorite memories represented as MemoryCards.
+  List<Widget> buildFavoritesMemoryList() {
+    return this.widget.memories.reversed.where((Memory memory) {
+      return memory.favorite;
+    }).map((Memory memory) {
+      return GestureDetector(
+          onTap: () {
+            Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => DetailScreen(
+                        memory: memory,
+                        memories: this.widget.memories,
+                        storage: this.widget.storage
+                    )
+                )
+            );
+          },
+          child: MemoryCard(memory)
+      );
+    }).toList();
+  }
+  /// Returns the screen layout being built in the given BuildContext [context].
+  @override
+  Widget build(BuildContext build) {
+    return Scaffold(
+        appBar: AppBar(
+            title: Text("Favorites")
+        ),
+        body: ListView(
+            children: this.buildFavoritesMemoryList()
+        )
+    );
+  }
+}
+
 /// Home page for the Fuzzy app.
 class HomeScreen extends StatefulWidget {
   static const double CARD_LIST_INSET = MemoryCard.CARD_VERTICAL_MARGIN;
@@ -666,6 +750,8 @@ class HomeScreen extends StatefulWidget {
       MEMORY_COUNT_FONT_SIZE / 2;
   static const double MEMORY_COUNT_PADDING = 8;
   static const double BUTTONS_TEXT_PADDING = 8;
+  static const double DISMISSIBLE_ICON_SIZE = 35;
+  static const double DISMISSIBLE_BACKGROUND_PADDING = 30;
 
   final DataStorage storage;
 
@@ -695,11 +781,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Returns a list of non-deleted memories represented as MemoryCards.
-  List<Widget> buildMemoryList() {
+  List<Map<String, dynamic>> buildMemoryCardList() {
     return this.memories.reversed.where((Memory memory) {
       return !memory.deleted;
     }).map((Memory memory) {
-      return GestureDetector(
+      return {"card": GestureDetector(
           onTap: () {
             Navigator.push(
                 context,
@@ -713,7 +799,7 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
           child: MemoryCard(memory)
-      );
+      ), "memoryListIndex": this.memories.indexOf(memory)};
     }).toList();
   }
 
@@ -743,6 +829,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return counter;
   }
 
+  /// Count the number of favorite memories.
+  int countFavorites() {
+    int counter = 0;
+
+    for (Memory memory in this.memories) {
+      if (memory.favorite) {
+        counter++;
+      }
+    }
+
+    return counter;
+  }
+
   // Retrieve an image from gallery.
   Future<File> getImage() async {
     var selected = await ImagePicker.pickImage(source: ImageSource.gallery);
@@ -753,16 +852,98 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Returns the home page being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
+    List<Map<String, dynamic>> memoryCardList = this.buildMemoryCardList();
+
     return Scaffold(
         appBar: AppBar(
             title: Text("Memories")
         ),
         body: Center(
-            child: ListView(
-                padding: EdgeInsets.symmetric(
-                    vertical: HomeScreen.CARD_LIST_INSET
-                ),
-                children: buildMemoryList()
+            child: ListView.builder(
+              padding: EdgeInsets.symmetric(
+                  vertical: HomeScreen.CARD_LIST_INSET
+              ),
+              itemCount: memoryCardList.length,
+              itemBuilder: (context, index) {
+                final memoryCard = memoryCardList[index];
+                final memory = this.memories[memoryCard["memoryListIndex"]];
+
+                return Dismissible(
+                    key: Key("MemoryCard " +
+                        memoryCard["memoryListIndex"].toString()),
+                    onDismissed: (direction) {
+                      if (direction == DismissDirection.endToStart) {
+                        setState(() {
+                          memory.moveToTrash(this.memories,
+                              this.widget.storage);
+                        });
+
+                        Scaffold.of(context).showSnackBar(
+                            SnackBar(content: Text("Moved to trash.")));
+                      }
+                    },
+                    confirmDismiss: (direction) {
+                      bool isDeleteDirection = direction ==
+                          DismissDirection.endToStart;
+
+                      if (!isDeleteDirection) { // Add memory to favorites
+                        if (!memory.favorite) {
+                          setState(() {
+                            memory.addToFavorites(this.memories,
+                                this.widget.storage);
+                          });
+
+                          Scaffold.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text("Added to favorites.")
+                              )
+                          );
+                        }
+                        else {
+                          setState(() {
+                            memory.removeFromFavorites(this.memories,
+                                this.widget.storage);
+                          });
+
+                          Scaffold.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text("Removed from favorites.")
+                              )
+                          );
+                        }
+                      }
+
+                      return Future.value(isDeleteDirection);
+                    },
+                    background: Container(
+                      color: Colors.green,
+                      alignment: Alignment.centerLeft,
+                      padding: EdgeInsets.all(
+                          HomeScreen.DISMISSIBLE_BACKGROUND_PADDING
+                      ),
+                      child: Icon(
+                        (memory.favorite == true ?
+                        Icons.star :
+                        Icons.star_border),
+                        color: Colors.white,
+                        size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                      ),
+                    ),
+                    secondaryBackground: Container(
+                      color: Colors.red,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.all(
+                          HomeScreen.DISMISSIBLE_BACKGROUND_PADDING
+                      ),
+                      child: Icon(
+                        Icons.delete,
+                        color: Colors.white,
+                        size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                      ),
+                    ),
+                    child: memoryCard["card"]
+                );
+              },
             )
         ),
         drawer: Drawer(
@@ -795,8 +976,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ]
                           ),
                           Text(
-                              "saved " +
-                                  (countSaved() == 1 ? "memory" : "memories"),
+                              "saved " + (this.countSaved() == 1 ? "memory" :
+                                  "memories"),
                               style: TextStyle(
                                   fontSize:
                                   HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
@@ -807,9 +988,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       )
                   ),
                   ListTile(
+                      leading: Icon(Icons.star),
+                      title: Text("Favorites"),
+                      trailing: Text(this.countFavorites().toString()),
+                      onTap: () {
+                        // Close drawer
+                        Navigator.pop(context);
+
+                        // Open trash screen
+                        Navigator.push(context, MaterialPageRoute(
+                            builder: (context) =>
+                                FavoritesScreen(
+                                    memories: this.memories,
+                                    storage: this.widget.storage
+                                )
+                        ));
+                      }
+                  ),
+                  ListTile(
                       leading: Icon(Icons.delete),
                       title: Text("Trash"),
-                      trailing: Text(countDeleted().toString()),
+                      trailing: Text(this.countDeleted().toString()),
                       onTap: () {
                         // Close drawer
                         Navigator.pop(context);
