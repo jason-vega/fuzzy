@@ -16,7 +16,6 @@ void main() {
 
 /// The root of this application.
 class FuzzyApp extends StatelessWidget {
-  /// Returns the MaterialApp being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -166,7 +165,7 @@ class Memory {
   }
 }
 
-/// Represents a physical display of a Memory.
+/// Represents a visual display of a Memory.
 class MemoryCard extends StatelessWidget {
   static const int MAX_COMMENT_LINES = 3;
   static const int MAX_AUTHOR_LINES = 1;
@@ -186,8 +185,6 @@ class MemoryCard extends StatelessWidget {
   /// Construct a new MemoryCard from the given [memory].
   MemoryCard(this.memory) : super(key: ObjectKey(memory));
 
-  /// Returns a Card representation for this MemoryCard's memory being built in
-  /// the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -222,11 +219,47 @@ class MemoryCard extends StatelessWidget {
   }
 }
 
+/// Represents a tappable visual display of a Memory.
+class TappableMemoryCard extends StatelessWidget {
+  final List<Memory> memories;
+  final Memory memory;
+  final DataStorage storage;
+
+  /// Construct a new TappableMemoryCard from the given [memory].
+  TappableMemoryCard(this.memory, this.memories, this.storage);
+
+  /// Expands a memory to a new DetailScreen with more info on that memory
+  void openDetailScreen(BuildContext context, Memory memory) async {
+    final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => DetailScreen(
+                memory: this.memory,
+                memories: this.memories,
+                storage: this.storage)));
+
+    Scaffold.of(context).removeCurrentSnackBar();
+
+    if (result != null) {
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text("$result")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+        onTap: () {
+          this.openDetailScreen(context, memory);
+        },
+        child: MemoryCard(memory));
+  }
+}
+
 /// An AppBar widget for the DetailScreen.
 class DetailScreenAppBar extends PreferredSize {
-  Memory memory;
-  List<Memory> memories;
-  DataStorage storage;
+  final Memory memory;
+  final List<Memory> memories;
+  final DataStorage storage;
 
   DetailScreenAppBar(this.memory, this.memories, this.storage);
 
@@ -309,7 +342,6 @@ class DetailScreen extends StatefulWidget {
 
 /// The state for a DetailScreen.
 class _DetailScreenState extends State<DetailScreen> {
-  /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -452,7 +484,6 @@ class _AddMemoryFormState extends State<AddMemoryForm> {
     this.widget.storage.saveMemories(this.widget.memories);
   }
 
-  /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     dateController.text = this._chosenDate != null
@@ -631,7 +662,6 @@ class _TrashScreenState extends State<TrashScreen> {
     }).toList();
   }
 
-  /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext build) {
     return Scaffold(
@@ -676,7 +706,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }).toList();
   }
 
-  /// Returns the screen layout being built in the given BuildContext [context].
   @override
   Widget build(BuildContext build) {
     return Scaffold(
@@ -695,6 +724,10 @@ class HomeScreen extends StatefulWidget {
   static const double BUTTONS_TEXT_PADDING = 8;
   static const double DISMISSIBLE_ICON_SIZE = 35;
   static const double DISMISSIBLE_BACKGROUND_PADDING = 30;
+
+  static const String TRASH_MESSAGE = "Moved to trash.";
+  static const String REMOVE_FAVORITE_MESSAGE = "Removed from favorites.";
+  static const String ADD_FAVORITE_MESSAGE = "Added to favorites.";
 
   final DataStorage storage;
 
@@ -729,24 +762,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return !memory.deleted;
     }).map((Memory memory) {
       return {
-        "card": GestureDetector(
-            onTap: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => DetailScreen(
-                          memory: memory,
-                          memories: this.memories,
-                          storage: this.widget.storage)));
-            },
-            child: MemoryCard(memory)),
+        "card": TappableMemoryCard(memory, this.memories, this.widget.storage),
         "memoryListIndex": this.memories.indexOf(memory)
       };
     }).toList();
   }
 
   /// Count the number of non-deleted memories saved.
-  int countSaved() {
+  int get saved {
     int counter = 0;
 
     for (Memory memory in this.memories) {
@@ -759,7 +782,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Count the number of memories currently in the trash.
-  int countDeleted() {
+  int get deleted {
     int counter = 0;
 
     for (Memory memory in this.memories) {
@@ -772,7 +795,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Count the number of favorite memories.
-  int countFavorites() {
+  int get favorites {
     int counter = 0;
 
     for (Memory memory in this.memories) {
@@ -791,7 +814,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return selected;
   }
 
-  /// Returns the home page being built in the given BuildContext [context].
   @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> memoryCardList = this.buildMemoryCardList();
@@ -815,8 +837,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       memory.moveToTrash(this.memories, this.widget.storage);
                     });
 
-                    Scaffold.of(context).showSnackBar(
-                        SnackBar(content: Text("Moved to trash.")));
+                    Scaffold.of(context)
+                      ..removeCurrentSnackBar()
+                      ..showSnackBar(
+                          SnackBar(content: Text(HomeScreen.TRASH_MESSAGE)));
                   }
                 },
                 confirmDismiss: (direction) {
@@ -831,16 +855,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             this.memories, this.widget.storage);
                       });
 
-                      Scaffold.of(context).showSnackBar(
-                          SnackBar(content: Text("Removed from favorites.")));
+                      Scaffold.of(context)
+                        ..removeCurrentSnackBar()
+                        ..showSnackBar(SnackBar(
+                            content: Text(HomeScreen.REMOVE_FAVORITE_MESSAGE)));
                     } else {
                       setState(() {
                         memory.addToFavorites(
                             this.memories, this.widget.storage);
                       });
 
-                      Scaffold.of(context).showSnackBar(
-                          SnackBar(content: Text("Added to favorites.")));
+                      Scaffold.of(context)
+                        ..removeCurrentSnackBar()
+                        ..showSnackBar(SnackBar(
+                            content: Text(HomeScreen.ADD_FAVORITE_MESSAGE)));
                     }
                   }
 
@@ -883,12 +911,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 Padding(
                     padding:
                         EdgeInsets.only(left: HomeScreen.MEMORY_COUNT_PADDING),
-                    child: Text(this.countSaved().toString(),
+                    child: Text(this.saved.toString(),
                         style: TextStyle(
                             fontSize: HomeScreen.MEMORY_COUNT_FONT_SIZE,
                             fontWeight: FontWeight.w300)))
               ]),
-              Text("saved " + (this.countSaved() == 1 ? "memory" : "memories"),
+              Text("saved " + (this.saved == 1 ? "memory" : "memories"),
                   style: TextStyle(
                       fontSize: HomeScreen.MEMORY_COUNT_SUBTITLE_FONT_SIZE,
                       fontWeight: FontWeight.w300))
@@ -897,7 +925,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
               leading: Icon(Icons.star),
               title: Text("Favorites"),
-              trailing: Text(this.countFavorites().toString()),
+              trailing: Text(this.favorites.toString()),
               onTap: () {
                 // Close drawer
                 Navigator.pop(context);
@@ -913,7 +941,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ListTile(
               leading: Icon(Icons.delete),
               title: Text("Trash"),
-              trailing: Text(this.countDeleted().toString()),
+              trailing: Text(this.deleted.toString()),
               onTap: () {
                 // Close drawer
                 Navigator.pop(context);
