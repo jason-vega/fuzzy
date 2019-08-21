@@ -170,9 +170,9 @@ class MemoryCard extends StatelessWidget {
   static const int MAX_COMMENT_LINES = 3;
   static const int MAX_AUTHOR_LINES = 1;
 
-  static const double COMMENT_FONT_SIZE = 24;
-  static const double AUTHOR_FONT_SIZE = 20;
-  static const double DATE_FONT_SIZE = 17;
+  static const double COMMENT_FONT_SIZE = 18;
+  static const double AUTHOR_FONT_SIZE = 16;
+  static const double DATE_FONT_SIZE = 14;
 
   static const double AUTHOR_LINE_HEIGHT = 1.5;
 
@@ -324,9 +324,9 @@ class DetailScreenAppBar extends PreferredSize {
 class DetailScreen extends StatefulWidget {
   static const double SCREEN_PADDING = 16;
 
-  static const double COMMENT_FONT_SIZE = 24;
-  static const double AUTHOR_FONT_SIZE = 20;
-  static const double DATE_FONT_SIZE = 18;
+  static const double COMMENT_FONT_SIZE = 20;
+  static const double AUTHOR_FONT_SIZE = 18;
+  static const double DATE_FONT_SIZE = 16;
 
   static const int RESTORE_BUTTON_INDEX = 1;
 
@@ -672,9 +672,13 @@ class _TrashScreenState extends State<TrashScreen> {
 
   @override
   Widget build(BuildContext build) {
+    List<Widget> deleted = this.buildDeletedMemoryList();
     return Scaffold(
         appBar: AppBar(title: Text("Trash")),
-        body: ListView(children: this.buildDeletedMemoryList()));
+        body: Center(
+            child: deleted.isEmpty
+                ? Text("No memories.")
+                : ListView(children: deleted)));
   }
 }
 
@@ -716,9 +720,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   @override
   Widget build(BuildContext build) {
+    List<Widget> favorites = this.buildFavoritesMemoryList();
+
     return Scaffold(
         appBar: AppBar(title: Text("Favorites")),
-        body: ListView(children: this.buildFavoritesMemoryList()));
+        body: Center(
+            child: favorites.isEmpty
+                ? Text("No memories.")
+                : ListView(children: favorites)));
   }
 }
 
@@ -829,84 +838,93 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
         appBar: AppBar(title: Text("Memories")),
         body: Center(
-            child: ListView.builder(
-          padding: EdgeInsets.symmetric(vertical: HomeScreen.CARD_LIST_INSET),
-          itemCount: memoryCardList.length,
-          itemBuilder: (context, index) {
-            final memoryCard = memoryCardList[index];
-            final memory = this.memories[memoryCard["memoryListIndex"]];
+            child: memories.isEmpty
+                ? Text('Tap the "+" button to add a memory.')
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(
+                        vertical: HomeScreen.CARD_LIST_INSET),
+                    itemCount: memoryCardList.length,
+                    itemBuilder: (context, index) {
+                      final memoryCard = memoryCardList[index];
+                      final memory =
+                          this.memories[memoryCard["memoryListIndex"]];
 
-            return Dismissible(
-                key: Key(
-                    "MemoryCard " + memoryCard["memoryListIndex"].toString()),
-                onDismissed: (direction) {
-                  if (direction == DismissDirection.endToStart) {
-                    setState(() {
-                      memory.moveToTrash(this.memories, this.widget.storage);
-                    });
+                      return Dismissible(
+                          key: Key("MemoryCard " +
+                              memoryCard["memoryListIndex"].toString()),
+                          onDismissed: (direction) {
+                            if (direction == DismissDirection.endToStart) {
+                              setState(() {
+                                memory.moveToTrash(
+                                    this.memories, this.widget.storage);
+                              });
 
-                    Scaffold.of(context)
-                      ..removeCurrentSnackBar()
-                      ..showSnackBar(
-                          SnackBar(content: Text(HomeScreen.TRASH_MESSAGE)));
-                  }
-                },
-                confirmDismiss: (direction) {
-                  bool isDeleteDirection =
-                      direction == DismissDirection.endToStart;
+                              Scaffold.of(context)
+                                ..removeCurrentSnackBar()
+                                ..showSnackBar(SnackBar(
+                                    content: Text(HomeScreen.TRASH_MESSAGE)));
+                            }
+                          },
+                          confirmDismiss: (direction) {
+                            bool isDeleteDirection =
+                                direction == DismissDirection.endToStart;
 
-                  if (!isDeleteDirection) {
-                    // Add memory to favorites
-                    if (memory.favorite) {
-                      setState(() {
-                        memory.removeFromFavorites(
-                            this.memories, this.widget.storage);
-                      });
+                            if (!isDeleteDirection) {
+                              // Add memory to favorites
+                              if (memory.favorite) {
+                                setState(() {
+                                  memory.removeFromFavorites(
+                                      this.memories, this.widget.storage);
+                                });
 
-                      Scaffold.of(context)
-                        ..removeCurrentSnackBar()
-                        ..showSnackBar(SnackBar(
-                            content: Text(HomeScreen.REMOVE_FAVORITE_MESSAGE)));
-                    } else {
-                      setState(() {
-                        memory.addToFavorites(
-                            this.memories, this.widget.storage);
-                      });
+                                Scaffold.of(context)
+                                  ..removeCurrentSnackBar()
+                                  ..showSnackBar(SnackBar(
+                                      content: Text(
+                                          HomeScreen.REMOVE_FAVORITE_MESSAGE)));
+                              } else {
+                                setState(() {
+                                  memory.addToFavorites(
+                                      this.memories, this.widget.storage);
+                                });
 
-                      Scaffold.of(context)
-                        ..removeCurrentSnackBar()
-                        ..showSnackBar(SnackBar(
-                            content: Text(HomeScreen.ADD_FAVORITE_MESSAGE)));
-                    }
-                  }
+                                Scaffold.of(context)
+                                  ..removeCurrentSnackBar()
+                                  ..showSnackBar(SnackBar(
+                                      content: Text(
+                                          HomeScreen.ADD_FAVORITE_MESSAGE)));
+                              }
+                            }
 
-                  return Future.value(isDeleteDirection);
-                },
-                background: Container(
-                  color: Colors.green,
-                  alignment: Alignment.centerLeft,
-                  padding:
-                      EdgeInsets.all(HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
-                  child: Icon(
-                    (memory.favorite ? Icons.star : Icons.star_border),
-                    color: Colors.white,
-                    size: HomeScreen.DISMISSIBLE_ICON_SIZE,
-                  ),
-                ),
-                secondaryBackground: Container(
-                  color: Colors.red,
-                  alignment: Alignment.centerRight,
-                  padding:
-                      EdgeInsets.all(HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
-                  child: Icon(
-                    Icons.delete,
-                    color: Colors.white,
-                    size: HomeScreen.DISMISSIBLE_ICON_SIZE,
-                  ),
-                ),
-                child: memoryCard["card"]);
-          },
-        )),
+                            return Future.value(isDeleteDirection);
+                          },
+                          background: Container(
+                            color: Colors.green,
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.all(
+                                HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
+                            child: Icon(
+                              (memory.favorite
+                                  ? Icons.star
+                                  : Icons.star_border),
+                              color: Colors.white,
+                              size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                            ),
+                          ),
+                          secondaryBackground: Container(
+                            color: Colors.red,
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.all(
+                                HomeScreen.DISMISSIBLE_BACKGROUND_PADDING),
+                            child: Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                              size: HomeScreen.DISMISSIBLE_ICON_SIZE,
+                            ),
+                          ),
+                          child: memoryCard["card"]);
+                    },
+                  )),
         drawer: Drawer(
             child: ListView(children: <Widget>[
           DrawerHeader(
