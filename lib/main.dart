@@ -838,7 +838,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
         appBar: AppBar(title: Text("Memories")),
         body: Center(
-            child: memories.isEmpty
+            child: saved == 0
                 ? Text('Tap the "+" button to add a memory.')
                 : ListView.builder(
                     padding: EdgeInsets.symmetric(
