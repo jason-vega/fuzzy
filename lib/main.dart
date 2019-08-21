@@ -194,7 +194,15 @@ class MemoryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   (this.memory.imageUrl != null
-                      ? Image.file(File(this.memory.imageUrl))
+                      ? AspectRatio(
+                          aspectRatio: 1,
+                          child: Container(
+                              decoration: BoxDecoration(
+                                  image: DecorationImage(
+                                      fit: BoxFit.fitWidth,
+                                      alignment: FractionalOffset.topCenter,
+                                      image: FileImage(
+                                          File(this.memory.imageUrl))))))
                       : Text(this.memory.comment,
                           style: TextStyle(
                               fontSize: COMMENT_FONT_SIZE,
